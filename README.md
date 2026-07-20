@@ -98,16 +98,33 @@ Prerequisites: Node 22+, pnpm 10+, and the Rust toolchain for desktop/mobile
 pnpm install
 cp .env.example .env
 
-pnpm dev                # web + api + shell-vite together (Turbo)
-pnpm dev:web            # web only  -> http://localhost:1420
-pnpm dev:api            # API only  -> http://localhost:8787
-pnpm desktop            # launch the Tauri desktop window
+pnpm dev                # api + web + shell-vite together
+pnpm dev:web            # api + web SPA
+pnpm dev:api            # api only
+pnpm desktop            # launch the Tauri desktop window (starts api + shell itself)
 pnpm mobile:ios         # iOS simulator   (first run: pnpm --filter @repo/shell tauri ios init)
 pnpm mobile:android     # Android emulator (first run: pnpm --filter @repo/shell tauri android init)
+
+pnpm ports              # print this clone's derived ports/URLs
+pnpm stop               # stop everything this clone started (dev servers + app window)
 
 pnpm check              # typecheck + lint + arch + size + dup + knip
 pnpm build              # production build
 ```
+
+Just run `pnpm desktop` — it's self-contained: it starts the API and the shell
+Vite server itself, then opens the native window pointed at them. Same for
+`pnpm dev` / `pnpm dev:web` (Ctrl+C stops them; `pnpm stop` clears anything left
+over, including the desktop window, which holds no port).
+
+### Dynamic ports (run many clones at once)
+
+Ports are **derived, never fixed** — `scripts/ports.mjs` hashes the repo path into
+a unique block of four (`api`, `web`, `shell`, `shell` HMR), so every clone of this
+template gets its own non-overlapping ports and you can run several side by side
+with no collisions. `pnpm ports` shows the plan; the launchers inject them into the
+API (`PORT`), Vite (`*_PORT`), and the frontends (`VITE_API_URL`) automatically.
+Nothing is hardcoded to a port number.
 
 Mobile is the *same* Tauri app as desktop (`apps/shell`); `tauri ios/android init`
 generates native projects under `apps/shell/src-tauri/gen/` (git-ignored).

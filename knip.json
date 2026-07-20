@@ -3,5 +3,6 @@
   "entry": ["turbo/generators/config.ts"],
   "ignoreExportsUsedInFile": true,
   "ignoreDependencies": ["@tauri-apps/api", "@tauri-apps/plugin-opener"],
+  "ignoreBinaries": ["taskkill"],
   "ignore": ["**/drizzle-example-repository.ts"]
 }

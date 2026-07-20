@@ -29,7 +29,10 @@ export default defineConfig({
     }),
   ],
   server: {
-    port: 1420,
+    // Derived per-clone by scripts/ports.mjs and passed in via WEB_PORT, so
+    // multiple templated apps can run at once. The fallback is only for a bare
+    // `vite` invocation outside the pnpm scripts.
+    port: Number(process.env.WEB_PORT) || 1420,
     strictPort: true,
   },
 });
