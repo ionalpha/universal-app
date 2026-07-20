@@ -1,0 +1,7 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": ["turbo/generators/config.ts"],
+  "ignoreExportsUsedInFile": true,
+  "ignoreDependencies": ["@tauri-apps/api", "@tauri-apps/plugin-opener"],
+  "ignore": ["**/drizzle-example-repository.ts"]
+}

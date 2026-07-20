@@ -1,0 +1,9 @@
+import { create } from "zustand";
+
+interface {{pascalCase name}}State {
+  ready: boolean;
+}
+
+export const use{{pascalCase name}} = create<{{pascalCase name}}State>(() => ({
+  ready: true,
+}));

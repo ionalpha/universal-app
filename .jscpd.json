@@ -1,0 +1,10 @@
+{
+  "threshold": 1,
+  "reporters": ["console"],
+  "absolute": false,
+  "gitignore": true,
+  "pattern": "{apps,packages}/**/src/**/*.{ts,tsx,rs}",
+  "ignore": ["**/node_modules/**", "**/dist/**", "**/target/**", "**/gen/**", "**/*.d.ts"],
+  "minLines": 10,
+  "minTokens": 70
+}

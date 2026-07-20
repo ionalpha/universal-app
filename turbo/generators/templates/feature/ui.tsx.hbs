@@ -1,0 +1,6 @@
+import { use{{pascalCase name}} } from "./model";
+
+export function {{pascalCase name}}() {
+  const { ready } = use{{pascalCase name}}();
+  return <div>{{pascalCase name}} feature ({ready ? "ready" : "loading"})</div>;
+}

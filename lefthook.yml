@@ -1,0 +1,38 @@
+# Git hooks (lefthook). Installed by the root `prepare` script on `pnpm install`.
+#
+# These are FAST LOCAL FEEDBACK, not the authoritative gate — they can be
+# bypassed with `git commit --no-verify`. CI must run the same `pnpm check`
+# (typecheck + lint + arch) so nothing that skips these hooks reaches main.
+
+# Sub-second: every commit, staged files only.
+pre-commit:
+  parallel: true
+  commands:
+    # Format + lint (Biome is Rust — milliseconds). Auto-fixes and re-stages.
+    format-lint:
+      glob: "*.{js,jsx,ts,tsx,json,jsonc,css}"
+      run: pnpm biome check --write --no-errors-on-unmatched {staged_files}
+      stage_fixed: true
+    # Architecture boundaries on the staged TS only — catches a file that newly
+    # crosses a layer without cruising the whole graph.
+    boundaries:
+      glob: "*.{ts,tsx}"
+      run: pnpm exec depcruise --config .dependency-cruiser.cjs --output-type err {staged_files}
+
+# Heavier gate before code leaves the machine. typecheck is too slow for
+# pre-commit, so it lives here. Everything is turbo-cached, so re-pushes are fast.
+pre-push:
+  parallel: true
+  commands:
+    typecheck:
+      run: pnpm typecheck
+    architecture:
+      run: pnpm arch
+    lint:
+      run: pnpm biome check .
+    file-size:
+      run: pnpm size
+    duplication:
+      run: pnpm dup
+    dead-code:
+      run: pnpm knip
