@@ -1,8 +1,25 @@
 # Universal App Template
 
-A template for building one TypeScript app that runs on web, desktop (Windows, macOS, Linux), iOS, Android, and as an installable PWA. The frontend is shared across all targets, the stack is type-safe end to end, and the data layer works offline.
+A **highly opinionated, machine-guarded** starter for building **one** TypeScript app
+that runs on web, desktop (Windows/macOS/Linux), iOS, Android, and as an installable
+PWA — all from a single shared frontend.
 
-> Status: in development. This README describes the intended architecture; the scaffold is still being built.
+This is not a neutral boilerplate. The stack is **decided**, the architecture is
+**enforced by tooling (not docs)**, and every choice is deliberate. If you want a
+blank canvas, this isn't it. If you want strong defaults and a paved road that keeps
+an AI or a team from degrading the structure as it grows — this is that.
+
+## Why opinionated
+
+- **One toolchain, four platforms.** Tauri v2 (not Electron, not Capacitor) is the
+  single native shell for desktop *and* mobile; the web target is the same SPA with
+  no shell. One core, one frontend, one mental model.
+- **Enforced structure, not suggested.** `pnpm check` fails the build on a crossed
+  layer boundary, an oversized file, duplicated logic, or dead code. Boundaries are
+  real, not aspirational. See [`ARCHITECTURE.md`](./ARCHITECTURE.md) and
+  [`AGENTS.md`](./AGENTS.md).
+- **Type-safe end to end.** TypeScript everywhere, one shared type package, Zod at
+  the edges, typed IPC (planned) — the compiler is the contract.
 
 ## Platforms
 
@@ -10,72 +27,97 @@ A template for building one TypeScript app that runs on web, desktop (Windows, m
 |---|---|---|
 | Web | Static SPA, deployed directly | via PWA |
 | PWA | Installable web app (service worker) | yes |
-| Desktop | Tauri v2 (Windows, macOS, Linux) | yes |
-| iOS | Tauri v2 mobile | yes |
-| Android | Tauri v2 mobile | yes |
+| Desktop | Tauri v2 (Windows, macOS, Linux) | planned |
+| iOS / Android | Tauri v2 mobile (one project) | planned |
 
-A single React SPA renders on every surface. Tauri v2 provides the desktop and mobile shells from one Rust core, so bundles stay small.
+A single React SPA renders on every surface. Tauri provides desktop + mobile from
+one Rust core, so bundles stay small.
 
-## Stack
+## The stack (decided)
 
 | Layer | Choice |
 |---|---|
 | Shell | Tauri v2 |
-| Frontend | React, TypeScript, Tailwind |
+| Frontend | React 19, TypeScript, Tailwind v4 |
 | Build tool | Vite 8 (Rolldown) |
-| UI system | shadcn/ui (Radix) |
-| Routing | TanStack Router |
-| State, data, forms | TanStack Query, Zustand, Zod, react-hook-form |
-| Backend | Hono with Hono RPC |
-| ORM | Drizzle |
-| Local data | libSQL (SQLite) |
-| Cloud DB and sync | Turso / libSQL embedded replicas |
-| IPC | tauri-specta (typed Rust/TS bindings) |
-| Auth | Better Auth |
-| Payments | Stripe with RevenueCat |
+| UI | shadcn-style components (Base UI is shadcn's 2026 default) |
+| State / data / forms | Zustand, TanStack Query, Zod, react-hook-form |
+| Backend | Hono |
+| ORM / data | Drizzle + libSQL (local) ⇄ Turso (cloud) |
+| Monorepo | pnpm workspaces (catalogs) + Turborepo |
+| Lint/format · hooks | Biome · lefthook |
+| Guards | dependency-cruiser · jscpd · knip · file-size cap |
 
-## Features
+Roadmap layers keep the same discipline: typed IPC (tauri-specta), Auth (Better
+Auth), Payments (Stripe + RevenueCat), push (APNs/FCM), i18n, observability.
 
-- Auth: email, OAuth, magic-link, passkeys, 2FA, organizations, role-based access, account management (with GDPR export/delete), transactional email.
-- Offline data and sync: encrypted local libSQL with bidirectional Turso sync and conflict handling.
-- Push notifications: one API over APNs (iOS), FCM (Android), and Web Push/VAPID (PWA).
-- Payments: Stripe on web and desktop, RevenueCat for cross-platform in-app purchases. Optional.
-- i18n: react-i18next, RTL, localized native menus.
-- Observability: rotating structured logs, crash reporting, consent-gated telemetry.
-- Backend services: background jobs and scheduling, file/media storage, feature flags, remote config.
-- Runtime UX: deep-linking and universal links, first-run onboarding, state restoration, native back navigation, offline/reconnect indicators.
-- Optional vector search via libSQL native vectors or sqlite-vec (no separate database).
+## Enforced architecture
 
-## Tooling
+`pnpm check` (also the pre-push hook) runs the full gate:
 
-- Lint/format: Biome. Git hooks: lefthook. Architecture rules: ast-grep, jscpd.
-- Types: strict `tsconfig`, ts-reset. Dependencies: pnpm catalogs, syncpack, knip, Renovate.
-- Testing: Vitest (unit), Playwright (web/desktop E2E), Maestro (mobile E2E), `cargo test`.
-- CI: reusable `rs-ci` and `ts-ci` workflows, Tauri build matrix, gitleaks, CodeQL, osv-scanner, size-limit, Lighthouse.
-- Versioning: Changesets. Security: CSP, per-window Tauri capabilities and ACL.
+- **`arch`** — dependency-cruiser: frontend `components/lib → features → app`
+  (downward only, features isolated); backend `domain` stays pure, `infra`/`http`
+  depend on it — never the reverse.
+- **`typecheck` · `lint`** — tsc + Biome.
+- **`size`** — no source file over 500 lines (ideal ~150).
+- **`dup`** — jscpd: no copy-pasted logic.
+- **`knip`** — no unused files, deps, or exports.
 
-## Structure (planned)
+Add a feature with `pnpm gen feature` — the generator emits a correct slice.
+
+## What's built today
+
+- Monorepo + all six guards green; both frontends build; the Tauri Rust core compiles.
+- Shared frontend (`packages/client`) with a P1 design system: theme (light/dark/
+  system), buttons/inputs/card/badge/spinner, layout primitives, app shell + page
+  header, loading/empty/error states, a Zod-driven **form kit**, and toasts.
+- Hono API (`apps/api`) with a clean `domain / infra / http` split (health + echo).
+- Example data layer (`packages/db`) — Drizzle + libSQL, clearly marked example
+  files you delete or replace. **Nothing creates a schema for you.**
+
+## Structure
 
 ```
 apps/
   web/        # React SPA + PWA (Vite)
-  desktop/    # Tauri v2 shell (desktop + iOS + Android)
-  api/        # Hono backend
+  shell/      # Tauri v2 native shell (desktop + iOS + Android)
+  api/        # Hono backend (domain / infra / http)
 packages/
-  ui/         # shadcn/ui components
-  types/      # shared TS types
-  db/         # Drizzle schema
-  config/     # tsconfig, tailwind, tokens
+  client/     # shared frontend (components, lib, features, app)
+  db/         # Drizzle schema + libSQL client (example only)
+  types/      # shared types (client <-> api contracts)
+  config/     # shared tsconfig
 ```
 
-Monorepo: pnpm workspaces (catalogs) with Turborepo.
+## Development
 
-## Roadmap
+Prerequisites: Node 22+, pnpm 10+, and the Rust toolchain for desktop/mobile
+(see [Tauri prerequisites](https://tauri.app/start/prerequisites/)).
 
-- Phase 0: scaffold, typed IPC, security, DX, testing.
-- Phase 1: one screen live across all targets.
-- Phase 2: auth, data and sync, UI, push, payments, observability.
-- Phase 3: build, sign, release, updater, app-store readiness, scaffold generator.
+```bash
+pnpm install
+cp .env.example .env
+
+pnpm dev                # web + api + shell-vite together (Turbo)
+pnpm dev:web            # web only  -> http://localhost:1420
+pnpm dev:api            # API only  -> http://localhost:8787
+pnpm desktop            # launch the Tauri desktop window
+pnpm mobile:ios         # iOS simulator   (first run: pnpm --filter @repo/shell tauri ios init)
+pnpm mobile:android     # Android emulator (first run: pnpm --filter @repo/shell tauri android init)
+
+pnpm check              # typecheck + lint + arch + size + dup + knip
+pnpm build              # production build
+```
+
+Mobile is the *same* Tauri app as desktop (`apps/shell`); `tauri ios/android init`
+generates native projects under `apps/shell/src-tauri/gen/` (git-ignored).
+
+## Example files
+
+Files marked `⚠️ EXAMPLE` (e.g. `packages/db/src/drizzle-example-repository.ts`,
+`schema/example.ts`) exist to show a pattern. They are not wired into the running
+app and create no cruft if ignored — copy the shape into your own code, then delete
+them.
 
 ## License
 
