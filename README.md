@@ -2,12 +2,12 @@
 
 A **highly opinionated, machine-guarded** starter for building **one** TypeScript app
 that runs on web, desktop (Windows/macOS/Linux), iOS, Android, and as an installable
-PWA — all from a single shared frontend.
+PWA - all from a single shared frontend.
 
 This is not a neutral boilerplate. The stack is **decided**, the architecture is
 **enforced by tooling (not docs)**, and every choice is deliberate. If you want a
 blank canvas, this isn't it. If you want strong defaults and a paved road that keeps
-an AI or a team from degrading the structure as it grows — this is that.
+an AI or a team from degrading the structure as it grows - this is that.
 
 ## Why opinionated
 
@@ -19,7 +19,7 @@ an AI or a team from degrading the structure as it grows — this is that.
   real, not aspirational. See [`ARCHITECTURE.md`](./ARCHITECTURE.md) and
   [`AGENTS.md`](./AGENTS.md).
 - **Type-safe end to end.** TypeScript everywhere, one shared type package, Zod at
-  the edges, typed IPC (planned) — the compiler is the contract.
+  the edges, typed IPC (planned) - the compiler is the contract.
 
 ## Platforms
 
@@ -55,15 +55,15 @@ Auth), Payments (Stripe + RevenueCat), push (APNs/FCM), i18n, observability.
 
 `pnpm check` (also the pre-push hook) runs the full gate:
 
-- **`arch`** — dependency-cruiser: frontend `components/lib → features → app`
+- **`arch`** - dependency-cruiser: frontend `components/lib → features → app`
   (downward only, features isolated); backend `domain` stays pure, `infra`/`http`
-  depend on it — never the reverse.
-- **`typecheck` · `lint`** — tsc + Biome.
-- **`size`** — no source file over 500 lines (ideal ~150).
-- **`dup`** — jscpd: no copy-pasted logic.
-- **`knip`** — no unused files, deps, or exports.
+  depend on it - never the reverse.
+- **`typecheck` · `lint`** - tsc + Biome.
+- **`size`** - no source file over 500 lines (ideal ~150).
+- **`dup`** - jscpd: no copy-pasted logic.
+- **`knip`** - no unused files, deps, or exports.
 
-Add a feature with `pnpm gen feature` — the generator emits a correct slice.
+Add a feature with `pnpm gen feature` - the generator emits a correct slice.
 
 ## What's built today
 
@@ -72,7 +72,7 @@ Add a feature with `pnpm gen feature` — the generator emits a correct slice.
   system), buttons/inputs/card/badge/spinner, layout primitives, app shell + page
   header, loading/empty/error states, a Zod-driven **form kit**, and toasts.
 - Hono API (`apps/api`) with a clean `domain / infra / http` split (health + echo).
-- Example data layer (`packages/db`) — Drizzle + libSQL, clearly marked example
+- Example data layer (`packages/db`) - Drizzle + libSQL, clearly marked example
   files you delete or replace. **Nothing creates a schema for you.**
 
 ## Structure
@@ -112,14 +112,14 @@ pnpm check              # typecheck + lint + arch + size + dup + knip
 pnpm build              # production build
 ```
 
-Just run `pnpm desktop` — it's self-contained: it starts the API and the shell
+Just run `pnpm desktop` - it's self-contained: it starts the API and the shell
 Vite server itself, then opens the native window pointed at them. Same for
 `pnpm dev` / `pnpm dev:web` (Ctrl+C stops them; `pnpm stop` clears anything left
 over, including the desktop window, which holds no port).
 
 ### Dynamic ports (run many clones at once)
 
-Ports are **derived, never fixed** — `scripts/ports.mjs` hashes the repo path into
+Ports are **derived, never fixed** - `scripts/ports.mjs` hashes the repo path into
 a unique block of four (`api`, `web`, `shell`, `shell` HMR), so every clone of this
 template gets its own non-overlapping ports and you can run several side by side
 with no collisions. `pnpm ports` shows the plan; the launchers inject them into the
@@ -133,7 +133,7 @@ generates native projects under `apps/shell/src-tauri/gen/` (git-ignored).
 
 Files marked `⚠️ EXAMPLE` (e.g. `packages/db/src/drizzle-example-repository.ts`,
 `schema/example.ts`) exist to show a pattern. They are not wired into the running
-app and create no cruft if ignored — copy the shape into your own code, then delete
+app and create no cruft if ignored - copy the shape into your own code, then delete
 them.
 
 ## License
