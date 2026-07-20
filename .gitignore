@@ -1,0 +1,29 @@
+# Scratch / reference clones
+tmp/
+
+# Codex agent workspace
+.codex/
+
+# Local Claude Code / MCP wiring (machine-specific, points at localhost)
+.mcp.json
+.claude/
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+out/
+target/
+.turbo/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
