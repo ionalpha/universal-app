@@ -20,6 +20,7 @@ catalog:
   "@biomejs/biome": ^2.5.4
   lefthook: ^2.1.10
   tsx: ^4.19.2
+  vitest: ^3.2.4
 
   # --- Build (Vite 8 / Rolldown) ---
   vite: ^8.1.5
