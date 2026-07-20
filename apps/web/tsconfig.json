@@ -1,0 +1,7 @@
+{
+  "extends": "@repo/config/tsconfig.react.json",
+  "compilerOptions": {
+    "types": ["vite/client", "vite-plugin-pwa/client"]
+  },
+  "include": ["src", "env.d.ts"]
+}

@@ -1,0 +1,14 @@
+@import "tailwindcss";
+@import "../../../packages/client/src/styles/theme.css";
+
+/* Scan the shared client package for Tailwind classes. */
+@source "../../../packages/client/src";
+
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
