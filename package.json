@@ -1,0 +1,41 @@
+{
+  "name": "universal-app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "packageManager": "pnpm@10.24.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:web": "pnpm --filter @repo/web dev",
+    "dev:api": "pnpm --filter @repo/api dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "arch": "depcruise --config .dependency-cruiser.cjs --output-type err apps packages",
+    "size": "node scripts/check-file-size.mjs",
+    "dup": "jscpd",
+    "knip": "knip",
+    "check": "pnpm typecheck && pnpm lint && pnpm arch && pnpm size && pnpm dup && pnpm knip",
+    "gen": "turbo gen",
+    "desktop": "pnpm --filter @repo/shell tauri dev",
+    "desktop:build": "pnpm --filter @repo/shell tauri build",
+    "mobile:ios": "pnpm --filter @repo/shell tauri ios dev",
+    "mobile:android": "pnpm --filter @repo/shell tauri android dev",
+    "db:generate": "pnpm --filter @repo/db exec drizzle-kit generate",
+    "prepare": "lefthook install || exit 0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "catalog:",
+    "@turbo/gen": "^2.10.5",
+    "dependency-cruiser": "^18.1.0",
+    "jscpd": "^5.0.12",
+    "knip": "^6.27.0",
+    "lefthook": "catalog:",
+    "turbo": "catalog:",
+    "typescript": "catalog:"
+  }
+}

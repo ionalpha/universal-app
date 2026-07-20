@@ -14,10 +14,19 @@ node_modules/
 
 # Build output
 dist/
+dev-dist/
 build/
 out/
 target/
 .turbo/
+
+# Tauri generated (platform projects, schemas)
+apps/shell/src-tauri/gen/
+
+# Local databases
+*.db
+*.db-journal
+local.db*
 
 # Env / secrets
 .env
