@@ -126,6 +126,12 @@ with no collisions. `pnpm ports` shows the plan; the launchers inject them into 
 API (`PORT`), Vite (`*_PORT`), and the frontends (`VITE_API_URL`) automatically.
 Nothing is hardcoded to a port number.
 
+Blocks land in `10000..31990`, below the 32768 floor where Linux starts handing
+out ephemeral ports (Windows and macOS start at 49152, and additionally reserve
+blocks up there for Hyper-V and WSL that nothing can bind at all). Set
+`DEV_PORT_BASE` to place a clone explicitly if you would rather assign a block
+yourself than take the hash's.
+
 Mobile is the *same* Tauri app as desktop (`apps/shell`); `tauri ios/android init`
 generates native projects under `apps/shell/src-tauri/gen/` (git-ignored).
 
