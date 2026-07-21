@@ -81,6 +81,98 @@ toolchain. `pnpm bindings:check` (part of `pnpm check`) regenerates and fails if
 the result differs, which is what stops it going stale. Regenerate with
 `pnpm bindings` after changing any command.
 
+## API security: the allowlist is derived, not typed
+
+The API shipped with `app.use("*", cors())` — `Access-Control-Allow-Origin: *`,
+every page on the internet allowed to call it from a logged-in user's browser.
+It now takes an `ApiConfig` resolved at the composition root
+(`infra/config.ts`), never reading the environment below that:
+
+- `ALLOWED_ORIGINS` is derived in dev by `scripts/ports.mjs`, from the same port
+  plan that produces the CSP. Nothing is hand-maintained.
+- The shell's own origins (`tauri://localhost` and the Windows http(s)
+  equivalents) are always allowed. A bundled app has no configurable origin, so
+  a deployment should not have to know them.
+- **In production an unset `ALLOWED_ORIGINS` throws at startup.** A deployment
+  that refuses to boot is a page; one that silently serves every origin is a
+  breach nobody notices.
+
+On top of that: `secureHeaders`, `csrf` (a cross-origin form post is a simple
+request — no preflight, so CORS never gets asked), `bodyLimit` and `timeout`.
+One deliberate deviation from Hono's defaults, in `http/security.ts`:
+`Cross-Origin-Resource-Policy` is `cross-origin`, not the default `same-origin`,
+which would block this API's own clients.
+
+Ten tests in `app.e2e.test.ts` assert the *behaviour*, not the config — they
+fail when a control is removed, so removing one is a visible act.
+
+## Webview security: assume the frontend is hostile
+
+A Tauri window is a browser with a bridge to native code behind it. Treat the
+frontend as the untrusted half — a compromised dependency runs there — and the
+question becomes: what can it reach? Three answers, all enforced by
+`pnpm security`.
+
+**A real CSP, not `csp: null`.** The scaffold default disables the policy
+entirely, which lets injected script load from anywhere and talk to anywhere.
+The shipped policy is `default-src 'self'` with `object-src`, `frame-src`,
+`child-src`, `frame-ancestors` and `form-action` at `'none'`, and `connect-src`
+as an explicit allowlist. Tauri appends a nonce or hash to `script-src` and
+`style-src` for the built assets, which is why production never needs
+`'unsafe-inline'`.
+
+| Where | Applies to | Source |
+|---|---|---|
+| `tauri.conf.json` `app.security.csp` | The bundled app | Written out, so it is readable without running anything |
+| `apps/shell/vite.config.ts` `server.headers` | Desktop dev | `devCsp()` in `scripts/csp.mjs` |
+| `shell.mjs` overlay `devCsp` | iOS/Android dev | `devCsp()` in `scripts/csp.mjs` |
+| `apps/web/vite.config.ts` `server.headers` | Web dev | `webCsp()` in `scripts/csp.mjs` |
+| `apps/web/dist/_headers` | Web production | `webHeadersFile()`, emitted at build |
+
+Five places because each is a different delivery mechanism, not a different
+policy. In desktop dev the webview loads straight from Vite and Tauri never
+touches the response; on mobile the dev server is proxied through Tauri's own
+protocol; a static SPA has no server of its own at all, so its policy ships as a
+file the host reads. They all come from one function, so they cannot enforce
+different rules, and `pnpm security` diffs the written-out production policy
+against that function directive by directive.
+
+The dev policies name this clone's derived ports rather than using
+`http://localhost:*`, which would silently admit every other dev server on the
+machine.
+
+**The browser target gets the same treatment, deliberately.** Its threat model
+is worse than the webview's — real cross-origin pages, real extensions, a real
+URL bar — so a weaker policy there would be backwards. It differs only in that
+it drops the IPC sources (no Rust core behind a browser tab) and adds the API
+origin. `_headers` is the Netlify and Cloudflare Pages format; other hosts need
+it translated (see README), which is why the file is emitted rather than
+described.
+
+`connect-src` names the exact API origin the bundle will call, so building
+without `VITE_API_URL` set produces a build warning rather than a deployed app
+whose own API is blocked by its own policy.
+
+Dev enforcing a policy at all is the point: without it, the strict production
+CSP is first exercised by a release build.
+
+**Capabilities that grant nothing.** `capabilities/default.json` holds an empty
+permission list. The scaffold shipped `core:default` + `opener:default`, roughly
+a hundred plugin commands reachable over IPC, and the frontend called none of
+them — the commands in `commands.rs` are *app* commands, which the ACL does not
+broker, and the opener plugin is only ever called from Rust. The JS half of that
+plugin was removed with the permission.
+
+**A guard, because the regression is silent.** Nothing breaks when a CSP goes
+back to null or `core:default` gets pasted in to unblock an afternoon; the app
+keeps running and the surface just grows. `pnpm security` fails on a null or
+drifted CSP, `'unsafe-eval'`, a wildcard or bare-scheme source, a capability
+that targets `"*"` or names no window, a capability file not listed in
+`app.security.capabilities`, and any permission outside `ALLOWED_PERMISSIONS` in
+`scripts/check-security.mjs`. Everything fails closed, so widening the surface
+takes an edit that shows up in review. `pnpm security --print` prints both
+policies.
+
 ## Enforcement
 
 `pnpm check` runs the whole gate (also in the pre-push hook + CI):
@@ -91,6 +183,7 @@ the result differs, which is what stops it going stale. Regenerate with
 - `pnpm dup` — jscpd copy/paste detector (no repeated logic).
 - `pnpm knip` — no unused files, deps, or exports.
 - `pnpm bindings:check` — the generated IPC bindings still match the Rust commands.
+- `pnpm security` — the webview CSP and capability grants have not been widened (above).
 - `pnpm build` — also enforces the gzip bundle budgets (below).
 - Package `exports` maps block deep imports across packages.
 

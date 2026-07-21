@@ -62,6 +62,7 @@ Auth), Payments (Stripe + RevenueCat), push (APNs/FCM), i18n, observability.
 - **`size`** - no source file over 500 lines (ideal ~150).
 - **`dup`** - jscpd: no copy-pasted logic.
 - **`knip`** - no unused files, deps, or exports.
+- **`security`** - the Tauri webview stays locked down (see below).
 
 Add a feature with `pnpm gen feature` - the generator emits a correct slice.
 
@@ -139,6 +140,42 @@ derived. Set `DEV_PORT_BASE` to pin a block explicitly and skip the search.
 
 Mobile is the *same* Tauri app as desktop (`apps/shell`); `tauri ios/android init`
 generates native projects under `apps/shell/src-tauri/gen/` (git-ignored).
+
+### Security
+
+Most Tauri starters ship `security.csp: null`, which turns the policy off. This
+one ships a real one on **every** target - desktop, mobile and browser -
+generated from a single function in `scripts/csp.mjs` so they cannot drift:
+`default-src 'self'`, `object-src`/`frame-ancestors`/`form-action` at `'none'`,
+and `connect-src` as an explicit allowlist.
+
+- **Shell**: `capabilities/default.json` grants **no** plugin permissions. Every
+  native call is an app command in `commands.rs`, and those are not brokered by
+  the ACL, so the scaffold's `core:default` + `opener:default` were ~100 IPC
+  commands nothing called.
+- **Web**: the production build emits `dist/_headers` (Netlify / Cloudflare
+  Pages format) with the CSP plus HSTS, `X-Content-Type-Options`,
+  `Referrer-Policy`, `Permissions-Policy` and the cross-origin headers. On other
+  hosts, translate it: `vercel.json` `headers`, an nginx `add_header` block, or
+  your CDN's rules.
+- **API**: an origin allowlist that **refuses to start** in production if
+  `ALLOWED_ORIGINS` is unset, rather than falling back to `*`. Plus secure
+  headers, CSRF, a body limit and a request timeout.
+
+Dev enforces the same policies against this clone's derived ports, so you find
+out about a blocked request while writing the code rather than at release.
+`pnpm security` (part of `pnpm check`) fails on a null or drifted CSP, a
+wildcard source, or any permission not on its allowlist; `pnpm security --print`
+shows every policy.
+
+**When you point this at a real backend**, set `VITE_API_URL` at build time -
+the CSP allows exactly the origin the bundle will call, and the web build warns
+if you do not. For the desktop app, add the origin to `connect-src` in
+`app.security.csp` (`apps/shell/src-tauri/tauri.conf.json`), which currently
+lists the template's default `http://localhost:8787`. If you add anything that
+loads from another origin, widen `cspDirectives()` in `scripts/csp.mjs` so dev
+and production stay in step. See [ARCHITECTURE.md](ARCHITECTURE.md) for the full
+model.
 
 ## Example files
 
