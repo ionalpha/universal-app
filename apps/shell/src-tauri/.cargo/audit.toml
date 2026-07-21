@@ -1,0 +1,32 @@
+# cargo-audit policy. `pnpm audit:rust` runs `cargo audit --deny warnings`, so
+# every warning class (unmaintained, unsound, yanked) fails unless listed here.
+# Each entry needs a reason and a review date; re-check on Tauri major updates.
+
+[advisories]
+ignore = [
+  # gtk-rs GTK3 bindings, unmaintained (reviewed 2026-07-21). Tauri v2 renders
+  # through GTK3 on Linux via wry/tao; these are unfixable at the app level
+  # until Tauri moves to GTK4. Linux-only code paths.
+  "RUSTSEC-2024-0411", # gdkwayland-sys
+  "RUSTSEC-2024-0412", # gdk
+  "RUSTSEC-2024-0413", # atk
+  "RUSTSEC-2024-0414", # gdkx11-sys
+  "RUSTSEC-2024-0415", # gtk
+  "RUSTSEC-2024-0416", # atk-sys
+  "RUSTSEC-2024-0417", # gdkx11
+  "RUSTSEC-2024-0418", # gdk-sys
+  "RUSTSEC-2024-0419", # gtk3-macros
+  "RUSTSEC-2024-0420", # gtk-sys
+  # glib 0.18 iterator unsoundness (reviewed 2026-07-21): same GTK3 stack,
+  # fixed in glib >= 0.20 which the Tauri Linux stack does not yet use.
+  "RUSTSEC-2024-0429",
+  # Unmaintained proc-macro/deps of the Tauri toolchain (reviewed 2026-07-21):
+  # compile-time only or pulled by tauri itself; nothing this crate can drop.
+  "RUSTSEC-2024-0370", # proc-macro-error
+  "RUSTSEC-2024-0436", # paste
+  "RUSTSEC-2025-0075", # unic-char-range
+  "RUSTSEC-2025-0080", # unic-common
+  "RUSTSEC-2025-0081", # unic-char-property
+  "RUSTSEC-2025-0098", # unic-ucd-version
+  "RUSTSEC-2025-0100", # unic-ucd-ident
+]

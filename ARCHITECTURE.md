@@ -175,6 +175,31 @@ that targets `"*"` or names no window, a capability file not listed in
 takes an edit that shows up in review. `pnpm security --print` prints both
 policies.
 
+## Supply chain: block at install time, audit on a clock
+
+An npm compromise runs code on the machine at install; an advisory tells you
+about it afterwards. The controls are split accordingly.
+
+**Install-time, in `pnpm-workspace.yaml`** (each with its reason inline):
+`minimumReleaseAge` (a compromised release is usually yanked within hours;
+a 3-day cooldown lets the ecosystem catch it first), `trustPolicy:
+no-downgrade` (a version whose publishing auth is weaker than its
+predecessor's is the shape of an account takeover; exclusions are listed with
+a review note each), `onlyBuiltDependencies: []` (no dependency runs install
+scripts - the platform-binary packages all use optionalDependencies instead),
+and `verifyDepsBeforeRun` (scripts refuse a node_modules that drifted from the
+lockfile).
+
+**Audits, in CI and on a schedule - deliberately not in `pnpm check`.** The
+advisory database changes while the code does not, so a per-push audit both
+misses new advisories between pushes and fails pushes for unrelated reasons;
+a network-dependent pre-push hook is one that gets bypassed. `pnpm audit:deps`
+runs the same audits locally: `pnpm audit` for JS, `cargo audit --deny
+warnings` (without `--deny` it exits 0 over findings) and `cargo deny check`
+(licences, sources, wildcard versions) for the Rust crate. Ignored advisories
+live in `apps/shell/src-tauri/.cargo/audit.toml` with a reason and review date
+each - a time-boxed mute, not a permanent one.
+
 ## Enforcement
 
 `pnpm check` runs the whole gate (also in the pre-push hook + CI):

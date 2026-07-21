@@ -1,0 +1,57 @@
+# cargo-deny policy: licences, banned crates, duplicate versions, sources.
+# Run with `pnpm audit:rust`. Advisory ignores live in .cargo/audit.toml for
+# cargo-audit; the same list is mirrored here because cargo-deny checks
+# advisories too.
+
+[graph]
+all-features = true
+
+[advisories]
+ignore = [
+  # Mirrors .cargo/audit.toml - see the reasons there.
+  "RUSTSEC-2024-0411",
+  "RUSTSEC-2024-0412",
+  "RUSTSEC-2024-0413",
+  "RUSTSEC-2024-0414",
+  "RUSTSEC-2024-0415",
+  "RUSTSEC-2024-0416",
+  "RUSTSEC-2024-0417",
+  "RUSTSEC-2024-0418",
+  "RUSTSEC-2024-0419",
+  "RUSTSEC-2024-0420",
+  "RUSTSEC-2024-0429",
+  "RUSTSEC-2024-0370",
+  "RUSTSEC-2024-0436",
+  "RUSTSEC-2025-0075",
+  "RUSTSEC-2025-0080",
+  "RUSTSEC-2025-0081",
+  "RUSTSEC-2025-0098",
+  "RUSTSEC-2025-0100",
+]
+
+[licenses]
+# Permissive licences only. Add here deliberately, not to unblock a build.
+allow = [
+  "MIT",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Zlib",
+  "BSL-1.0",
+  "Unicode-3.0",
+  "CC0-1.0",
+  "MPL-2.0",
+  "OpenSSL",
+]
+
+[bans]
+# Duplicate versions of the same crate are a warning, not an error: the Tauri
+# stack currently carries several and they are not ours to fix.
+multiple-versions = "warn"
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

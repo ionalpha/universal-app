@@ -164,6 +164,21 @@ and `connect-src` as an explicit allowlist.
 disabled or edited CSP, a wildcard source, a capability grant outside the
 allowlist. `pnpm security --print` shows every policy.
 
+**Supply chain.** `pnpm-workspace.yaml` turns on pnpm's supply-chain controls
+(all opt-in on pnpm 10): a 3-day cooldown before newly published versions
+resolve (`minimumReleaseAge`), publisher trust checks
+(`trustPolicy: no-downgrade`), an empty install-script allowlist
+(`onlyBuiltDependencies: []` - nothing in the tree needs one), and
+lockfile-verified runs (`verifyDepsBeforeRun`). `pnpm audit:deps` runs
+`pnpm audit` plus `cargo audit`/`cargo deny` against the Rust crate; the cargo
+policies live in `apps/shell/src-tauri/deny.toml` and `.cargo/audit.toml`, and
+every ignored advisory has a written reason and review date. Audits run in CI
+and on a schedule rather than in `pnpm check`: the advisory database changes
+while your code does not, and a network-dependent pre-push hook is one that
+gets bypassed. The cargo half needs
+[`cargo-audit`](https://github.com/rustsec/rustsec) and
+[`cargo-deny`](https://github.com/EmbarkStudios/cargo-deny) installed.
+
 **When you point the apps at a real backend**, set `VITE_API_URL` at build time
 so the web CSP allows that origin (the build warns if it is unset), and add the
 origin to `connect-src` in `app.security.csp`

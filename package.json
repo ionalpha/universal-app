@@ -25,6 +25,8 @@
     "bindings": "cargo run --quiet --manifest-path apps/shell/src-tauri/Cargo.toml --bin export_bindings",
     "bindings:check": "node scripts/check-bindings.mjs",
     "security": "node scripts/check-security.mjs",
+    "audit:rust": "cd apps/shell/src-tauri && cargo audit --deny warnings && cargo deny check",
+    "audit:deps": "pnpm audit && pnpm audit:rust",
     "dup": "jscpd",
     "knip": "knip",
     "check": "pnpm typecheck && pnpm test && pnpm lint && pnpm arch && pnpm size && pnpm dup && pnpm knip && pnpm security && pnpm bindings:check",

@@ -3,6 +3,7 @@ name = "universal-app"
 version = "0.0.0"
 description = "Universal App"
 authors = ["Ion Alpha"]
+license = "MIT"
 edition = "2021"
 # specta uses `fmt::from_fn`, stabilised in 1.92. Declared so a clone on an
 # older toolchain fails with "requires rustc 1.92" instead of an unstable-feature

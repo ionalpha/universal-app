@@ -2,6 +2,48 @@ packages:
   - "apps/*"
   - "packages/*"
 
+# --- Supply-chain controls (all opt-in on pnpm 10, so set explicitly) ---
+
+# Refuse versions published less than 3 days ago. A compromised release
+# (Shai-Hulud, Glassworm) is usually yanked within hours; the cooldown lets the
+# ecosystem catch it before this repo does. Resolution-time only: the existing
+# lockfile is unaffected, updates just lag by the window.
+minimumReleaseAge: 4320
+
+# Refuse a version whose publishing auth is weaker than the previous one's
+# (e.g. trusted publishing back to a plain token) - the pattern of an account
+# takeover. The only consumer-side control that sees this.
+trustPolicy: no-downgrade
+
+# Reviewed exclusions from trustPolicy, one comment each. Do not add one
+# without checking the release on npm first.
+# - rollup-plugin-off-main-thread fork, pinned to 3.0.0-pre1 by workbox-build
+#   7.4.1: the pre-release was published without the provenance its stable
+#   releases carry. Same maintainer, expected content (reviewed 2026-07-21).
+# - semver 6.3.1: backport to the 6.x line published July 2023, after npm
+#   provenance shipped on the 7.x line, so date-based checking sees a
+#   "downgrade". Ubiquitous babel dependency, content reviewed upstream.
+trustPolicyExclude:
+  - "@trickfilm400/rollup-plugin-off-main-thread"
+  - semver
+
+# No dependency may run install scripts. Nothing here needs them: Tauri CLI,
+# esbuild and lefthook all ship platform binaries as optionalDependencies, no
+# postinstall required. A future dep that "needs" a build script gets a visible
+# warning and an explicit entry here, not silent arbitrary code at install.
+onlyBuiltDependencies: []
+
+# Running a script against a node_modules that does not match the lockfile is
+# how a poisoned local install goes unnoticed; re-install instead.
+verifyDepsBeforeRun: install
+
+# drizzle-kit -> @esbuild-kit/esm-loader (deprecated, merged into tsx) pins
+# esbuild ^0.18, which carries GHSA-67mh-4wv8-2f99 (dev server responds to any
+# origin). Force the patched line; esbuild-kit only uses the stable transform
+# API, which is unchanged in 0.25.
+overrides:
+  "esbuild@<0.25.0": ">=0.25.0"
+
 # Single source of truth for dependency versions across the monorepo.
 # Packages reference these with the `catalog:` protocol to prevent version drift.
 catalog:
