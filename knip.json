@@ -2,6 +2,6 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": ["turbo/generators/config.ts"],
   "ignoreExportsUsedInFile": true,
-  "ignoreBinaries": ["taskkill"],
+  "ignoreBinaries": ["taskkill", "gitleaks"],
   "ignore": ["**/drizzle-example-repository.ts"]
 }

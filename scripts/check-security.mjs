@@ -187,6 +187,31 @@ if (security.dangerousDisableAssetCspModification) {
   );
 }
 
+// --- Vite envPrefix ----------------------------------------------------------
+
+// Vite inlines every environment variable matching envPrefix into the client
+// bundle. GHSA-2rcp-jvr4-r259 is this exact failure: `envPrefix: ["VITE_",
+// "TAURI_"]`, copied from documentation, shipped TAURI_PRIVATE_KEY - the
+// updater signing key - inside the frontend. TAURI_ENV_* is the safe subset:
+// Tauri only ever sets build metadata (platform, arch, debug) under it. The
+// build output is scanned too (check-bundle-secrets.mjs); this catches the
+// config edit before anything is built with it.
+const ALLOWED_ENV_PREFIXES = new Set(["VITE_", "TAURI_ENV_*"]);
+for (const configFile of ["apps/shell/vite.config.ts", "apps/web/vite.config.ts"]) {
+  const source = readFileSync(join(repoRoot, configFile), "utf8");
+  const declaration = source.match(/envPrefix\s*:\s*(\[[^\]]*\]|["'`][^"'`]*["'`])/);
+  if (!declaration) continue; // Vite's default is VITE_ alone, which is fine.
+  const prefixes = (declaration[1].match(/["'`]([^"'`]+)["'`]/g) ?? []).map((s) => s.slice(1, -1));
+  for (const prefix of prefixes.filter((p) => !ALLOWED_ENV_PREFIXES.has(p))) {
+    fail(
+      `${configFile} sets envPrefix "${prefix}". Everything matching envPrefix is inlined\n` +
+        '    into the shipped bundle. Only "VITE_" (public by definition) and "TAURI_ENV_*"\n' +
+        '    (build metadata) are allowed; a bare "TAURI_" matches TAURI_SIGNING_PRIVATE_KEY,\n' +
+        "    which is how GHSA-2rcp-jvr4-r259 shipped an updater signing key to users.",
+    );
+  }
+}
+
 // --- Capabilities ------------------------------------------------------------
 
 const capabilityFiles = readdirSync(capabilitiesDir).filter((f) => f.endsWith(".json"));

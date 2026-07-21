@@ -113,6 +113,17 @@ pnpm check              # typecheck + lint + arch + size + dup + knip
 pnpm build              # production build
 ```
 
+**Environment variables have a hard public/private boundary.** A `VITE_` prefix
+means *public, permanently, on every platform*: Vite inlines it into the bundle,
+which is served to every browser and unpacked from every app-store binary just
+as easily. Everything else (`DATABASE_URL`, `TURSO_AUTH_TOKEN`, ...) stays
+server-side and must never gain the prefix to "make something work" - move the
+call behind the API instead. Three guards enforce this: `pnpm security` rejects
+any widened `envPrefix` in the Vite configs, `pnpm build` scans the actual
+output for secret shapes and for the values of non-`VITE_` variables, and the
+pre-commit hook runs gitleaks over the staged diff (skipped with a warning if
+not installed).
+
 Just run `pnpm desktop` - it's self-contained: it starts the API and the shell
 Vite server itself, then opens the native window pointed at them. Same for
 `pnpm dev` / `pnpm dev:web` (Ctrl+C stops them; `pnpm stop` clears anything left

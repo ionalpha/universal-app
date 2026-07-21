@@ -18,6 +18,11 @@ pre-commit:
     boundaries:
       glob: "*.{ts,tsx}"
       run: pnpm exec depcruise --config .dependency-cruiser.cjs --output-type err {staged_files}
+    # Secret scan on the staged diff (gitleaks; skips with a warning when not
+    # installed). Runs here rather than pre-push because a secret in history
+    # needs rotating even if the push is stopped.
+    secrets:
+      run: node scripts/check-secrets.mjs
 
 # Heavier gate before code leaves the machine. typecheck is too slow for
 # pre-commit, so it lives here. Everything is turbo-cached, so re-pushes are fast.

@@ -13,7 +13,7 @@
     "dev:api": "node scripts/dev.mjs api",
     "ports": "node scripts/ports.mjs",
     "stop": "node scripts/stop.mjs",
-    "build": "turbo run build && node scripts/check-bundle-size.mjs",
+    "build": "turbo run build && node scripts/check-bundle-size.mjs && node scripts/check-bundle-secrets.mjs",
     "budget": "node scripts/check-bundle-size.mjs",
     "clean": "cargo clean --manifest-path apps/shell/src-tauri/Cargo.toml && node scripts/clean.mjs",
     "test": "turbo run test && node --test \"scripts/*.test.mjs\"",
