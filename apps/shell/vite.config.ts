@@ -1,7 +1,7 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
-import { devCsp } from "../../scripts/csp.mjs";
+import { devCsp, hardenedHeaders } from "../../scripts/csp.mjs";
 
 // Tauri needs to know the webview URL up front; scripts/desktop.mjs derives
 // this clone's shell port and hands it to both Tauri and Vite (via SHELL_PORT)
@@ -32,6 +32,10 @@ export default defineConfig({
         hmrPort,
         host: host || undefined,
       }),
+      // The same non-CSP headers production sets via app.security.headers, so
+      // the one value that can break a working request (COEP require-corp
+      // blocks any fetch the API does not CORS-approve) breaks in dev first.
+      ...hardenedHeaders(),
     },
     hmr: host ? { protocol: "ws", host, port: hmrPort } : undefined,
     // The LAN bind (TAURI_DEV_HOST, required for on-device mobile dev) is the

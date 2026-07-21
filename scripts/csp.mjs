@@ -154,6 +154,55 @@ export function webCsp({ apiUrl = DEFAULT_API_URL, dev = false, port } = {}) {
 }
 
 /**
+ * Non-CSP security headers, shared by every delivery path: the Tauri protocol
+ * (`app.security.headers`, guarded by check-security.mjs), the shell's Vite dev
+ * server, and the web `_headers` file. One object so a value proven safe in dev
+ * (COEP is the one that can break a working fetch) is the value that ships.
+ *
+ * Permissions-Policy has no "deny everything" token - `*=()` is not valid
+ * syntax and browsers ignore it silently, which is worse than no header - so
+ * the powerful features are denied by name. Delete an entry to use the feature.
+ */
+export function hardenedHeaders() {
+  return {
+    // One browsing context group per window; nothing can hold a handle to it.
+    "Cross-Origin-Opener-Policy": "same-origin",
+    // Only same-origin or explicitly CORS/CORP-approved resources may load.
+    // The API opts in: it serves Cross-Origin-Resource-Policy: cross-origin.
+    "Cross-Origin-Embedder-Policy": "require-corp",
+    "Cross-Origin-Resource-Policy": "same-origin",
+    "X-Content-Type-Options": "nosniff",
+    "Permissions-Policy": [
+      "accelerometer",
+      "autoplay",
+      "bluetooth",
+      "camera",
+      "display-capture",
+      "encrypted-media",
+      "fullscreen",
+      "geolocation",
+      "gyroscope",
+      "hid",
+      "idle-detection",
+      "local-fonts",
+      "magnetometer",
+      "microphone",
+      "midi",
+      "payment",
+      "picture-in-picture",
+      "publickey-credentials-get",
+      "screen-wake-lock",
+      "serial",
+      "usb",
+      "web-share",
+      "xr-spatial-tracking",
+    ]
+      .map((feature) => `${feature}=()`)
+      .join(", "),
+  };
+}
+
+/**
  * The production policy as a `_headers` file, the format Netlify and Cloudflare
  * Pages read.
  *
@@ -165,13 +214,11 @@ export function webCsp({ apiUrl = DEFAULT_API_URL, dev = false, port } = {}) {
 export function webHeadersFile(apiUrl = DEFAULT_API_URL) {
   const headers = {
     "Content-Security-Policy": webCsp({ apiUrl }),
-    // Below are the OWASP baseline that CSP does not cover.
+    ...hardenedHeaders(),
+    // The web-only baseline on top: transport and referrer rules a native
+    // window has no use for.
     "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
-    "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "no-referrer",
-    "Permissions-Policy": "*=()",
-    "Cross-Origin-Opener-Policy": "same-origin",
-    "Cross-Origin-Resource-Policy": "same-origin",
     // X-Frame-Options is redundant with the CSP's frame-ancestors 'none' for
     // any current browser, and kept for the ones that never learned the newer
     // directive. Redundant, not conflicting.

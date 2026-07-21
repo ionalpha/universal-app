@@ -165,14 +165,46 @@ ever invoked from Rust (so the webview has no grant for it and its JS half is
 not a dependency). A grant like `core:default` would expose roughly a hundred
 IPC commands nothing uses.
 
+**Locked-down protocol headers.** `app.security.headers` sets the non-CSP
+response headers on Tauri's own protocol: `Cross-Origin-Opener-Policy` and
+`-Resource-Policy` at `same-origin`, `Cross-Origin-Embedder-Policy` at
+`require-corp` (the API opts in by serving CORS approval plus
+`Cross-Origin-Resource-Policy: cross-origin`), `nosniff`, and a
+Permissions-Policy that denies the powerful browser features by name - by
+name because the spec has no deny-everything token; `*=()` is invalid syntax
+that browsers skip silently. The values live in `hardenedHeaders()` in
+`scripts/csp.mjs`, which the shell dev server also sends, so COEP - the one
+header that can break a working fetch - would break in dev, not in a release
+build. The written-out copy in `tauri.conf.json` is diffed against the
+function by `pnpm security`.
+
+**Brownfield over Isolation, decided rather than defaulted.** Tauri's docs
+recommend the Isolation pattern - a sandboxed iframe that can inspect IPC
+messages before the Rust core sees them, aimed at compromised frontend
+dependencies. This template stays on Brownfield, for two reasons. First, the
+protection is only as good as the validation logic written into the isolation
+hook, and against a three-command IPC surface with zero plugin permissions
+there is nothing meaningful for that hook to reject that the ACL and the
+generated bindings do not already constrain. Second, Isolation requires an
+iframe, and this CSP sets `frame-src`/`child-src` to `'none'` - which closes
+the remote-iframe IPC-bypass class (GHSA-57fm-592m-34r7) outright. Trading a
+structural exclusion for an inspection layer with no rules would be a
+downgrade wearing a recommended-practice label. Revisit if the command
+surface grows past easy audit or a plugin permission is ever granted; the
+compromised-dependency threat itself is answered upstream by the supply-chain
+controls (below) and the bundle secret scan.
+
 **A guard, because the regression is silent.** Nothing breaks when a CSP goes
 back to null or `core:default` gets pasted in to unblock an afternoon; the app
 keeps running and the surface just grows. `pnpm security` fails on a null or
 drifted CSP, `'unsafe-eval'`, a wildcard or bare-scheme source, a capability
 that targets `"*"` or names no window, a capability file not listed in
-`app.security.capabilities`, and any permission outside `ALLOWED_PERMISSIONS` in
-`scripts/check-security.mjs`. Everything fails closed, so widening the surface
-takes an edit that shows up in review. `pnpm security --print` prints both
+`app.security.capabilities`, any permission outside `ALLOWED_PERMISSIONS` in
+`scripts/check-security.mjs`, drifted or missing protocol headers, an
+`envPrefix` beyond `VITE_`/`TAURI_ENV_*`, a Vite version below the patched
+floor, and the `devtools` cargo feature (which would compile the inspector
+into release builds). Everything fails closed, so widening the surface takes
+an edit that shows up in review. `pnpm security --print` prints both
 policies.
 
 ## Supply chain: block at install time, audit on a clock

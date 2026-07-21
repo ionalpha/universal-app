@@ -2,7 +2,14 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { cspDirectives, devCsp, serializeCsp, webCsp, webHeadersFile } from "./csp.mjs";
+import {
+  cspDirectives,
+  devCsp,
+  hardenedHeaders,
+  serializeCsp,
+  webCsp,
+  webHeadersFile,
+} from "./csp.mjs";
 
 // Keeps the Tauri webview's security posture from quietly regressing.
 //
@@ -163,6 +170,51 @@ if (existsSync(webHeadersPath)) {
       fail(`apps/web/dist/_headers is missing ${header}. Rebuild the web app.`);
     }
   }
+}
+
+// --- Protocol response headers -----------------------------------------------
+
+// Same drift rule as the CSP: the production values are written out in
+// tauri.conf.json for reviewability, and this asserts they still match
+// hardenedHeaders() - which the shell dev server also sends, so a value that
+// breaks a request (COEP is the candidate) breaks in dev first, not in a
+// release build.
+const expectedHeaders = hardenedHeaders();
+const actualHeaders = security.headers ?? {};
+for (const [name, value] of Object.entries(expectedHeaders)) {
+  if (actualHeaders[name] !== value) {
+    fail(
+      `app.security.headers "${name}" is ${JSON.stringify(actualHeaders[name])}, expected\n` +
+        `    ${JSON.stringify(value)}. Edit hardenedHeaders() in scripts/csp.mjs instead, so the\n` +
+        "    dev server and the web _headers file change with it.",
+    );
+  }
+}
+for (const name of Object.keys(actualHeaders)) {
+  if (!(name in expectedHeaders)) {
+    fail(`app.security.headers sets "${name}", which scripts/csp.mjs does not declare.`);
+  }
+}
+if (/\*\s*=\s*\(\)/.test(actualHeaders["Permissions-Policy"] ?? "")) {
+  fail(
+    'app.security.headers Permissions-Policy contains "*=()", which is not valid syntax -\n' +
+      "    browsers ignore it silently, so the header protects nothing. Deny by name.",
+  );
+}
+
+// --- Devtools stay out of release builds -------------------------------------
+
+// Tauri only compiles the inspector into debug builds unless the `devtools`
+// cargo feature asks for it everywhere. That is a one-word edit made to debug
+// something in a release build, and nothing else would ever notice it.
+const cargoToml = readFileSync(join(crateDir, "Cargo.toml"), "utf8");
+const tauriDep = cargoToml.match(/^tauri\s*=\s*\{[^}]*\}/m)?.[0] ?? "";
+if (/features\s*=\s*\[[^\]]*"devtools"/.test(tauriDep)) {
+  fail(
+    'Cargo.toml enables the "devtools" feature on the tauri crate, which compiles the\n' +
+      "    web inspector into release builds. Debug builds already have it; remove the\n" +
+      "    feature so shipped binaries do not carry an open door into the webview.",
+  );
 }
 
 // --- Other webview settings --------------------------------------------------
