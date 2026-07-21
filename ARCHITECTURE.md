@@ -52,7 +52,34 @@ the formal name, this is a domain/infrastructure split, a.k.a. ports & adapters.
 ## Rust core (`apps/shell/src-tauri`)
 
 Single crate, module-per-concern. `main.rs` is a thin entry; `lib.rs` holds
-`run()`, shared by desktop and mobile.
+`run()`, shared by desktop and mobile, plus `ipc()` — the one place commands are
+registered.
+
+```
+src/lib.rs              run() + ipc(): the command surface, declared once.
+src/commands.rs         The commands themselves. Every one returns Result<T, Error>.
+src/error.rs            The error taxonomy that crosses the boundary.
+src/bin/export_bindings.rs   Generates the TypeScript bindings.
+```
+
+## The IPC boundary is generated, never hand-written
+
+Nothing calls `invoke("some_string")`. `ipc()` is the single source of truth:
+`run()` mounts it as the invoke handler and the generator exports it, so a
+command cannot exist at runtime without also existing in TypeScript.
+
+| File | Role |
+|---|---|
+| `apps/shell/src/bindings.ts` | **Generated.** Committed, never edited, excluded from Biome. |
+| `apps/shell/src/ipc.ts` | The hand-written wrapper app code imports. Converts the generated `Result` into a thrown `IpcError`. |
+
+Errors carry a stable `key`, not a sentence — the Rust core never decides what
+the user reads, so the app stays translatable. `detail` is for logs.
+
+The generated file is committed so a fresh clone can typecheck without a Rust
+toolchain. `pnpm bindings:check` (part of `pnpm check`) regenerates and fails if
+the result differs, which is what stops it going stale. Regenerate with
+`pnpm bindings` after changing any command.
 
 ## Enforcement
 
@@ -63,6 +90,7 @@ Single crate, module-per-concern. `main.rs` is a thin entry; `lib.rs` holds
 - `pnpm size` — no source file over 500 lines; ideal is ~150 (no dumping grounds).
 - `pnpm dup` — jscpd copy/paste detector (no repeated logic).
 - `pnpm knip` — no unused files, deps, or exports.
+- `pnpm bindings:check` — the generated IPC bindings still match the Rust commands.
 - Package `exports` maps block deep imports across packages.
 
 ## Patterns that keep it scaling

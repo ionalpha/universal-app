@@ -4,7 +4,10 @@ version = "0.0.0"
 description = "Universal App"
 authors = ["Ion Alpha"]
 edition = "2021"
-rust-version = "1.77.2"
+# specta uses `fmt::from_fn`, stabilised in 1.92. Declared so a clone on an
+# older toolchain fails with "requires rustc 1.92" instead of an unstable-feature
+# error from deep inside a dependency. Verified: 1.91.1 fails, 1.97.1 builds.
+rust-version = "1.92"
 
 # The lib is what mobile (iOS/Android) links against; keep all three crate types.
 [lib]
@@ -19,3 +22,7 @@ tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+thiserror = "2.0.19"
+specta-typescript = "0.0.12"
+specta = "2.0.0-rc"
+tauri-specta = { version = "2.0.0-rc", features = ["typescript"] }
