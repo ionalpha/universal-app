@@ -63,6 +63,8 @@ Auth), Payments (Stripe + RevenueCat), push (APNs/FCM), i18n, observability.
 - **`dup`** - jscpd: no copy-pasted logic.
 - **`knip`** - no unused files, deps, or exports.
 - **`security`** - the Tauri webview stays locked down (see below).
+- **`template`** - the app has one identity, spelled the same way everywhere
+  (see [Make it yours](#make-it-yours)).
 
 Add a feature with `pnpm gen feature` - the generator emits a correct slice.
 
@@ -90,6 +92,43 @@ packages/
   config/     # shared tsconfig
 ```
 
+## Make it yours
+
+One command renames the clone across both toolchains:
+
+```bash
+pnpm rename "Acme Notes"
+pnpm rename "Acme Notes" --identifier com.acme.notes --author "Acme Inc"
+pnpm install            # the workspace name changed
+```
+
+It writes every identity site from the one display name: the workspace and
+crate names, the Cargo description and `default-run`, the Cargo.lock entry, the
+Tauri product name, window title and bundle identifier, both `index.html`
+titles, the PWA manifest, the in-app brand and the README title. Without
+`--identifier` it derives a placeholder (`com.example.acmenotes`) that is
+obviously yours to replace before publishing.
+
+Two things it deliberately does not touch:
+
+- **The Rust lib crate is called `app_lib` and stays that way.** `main.rs` calls
+  it by name, and a lib renamed out of step with that call leaves the app with
+  no entry point: it does not compile, and nothing says so until the first
+  `cargo build`. Keeping it identity-free makes the mismatch impossible rather
+  than merely unlikely.
+- **`src-tauri/gen/`** holds the generated Android and Xcode projects, built
+  around the previous identifier. Delete it after renaming and re-run
+  `pnpm mobile:android` / `pnpm mobile:ios`; otherwise a device installs the
+  renamed app alongside the old one instead of replacing it.
+
+`pnpm template` (part of `pnpm check`) reads all of it back and fails if any
+site disagrees with the product name, if `main.rs` calls a crate the Cargo
+manifest does not define, if Cargo.lock has not learned the crate's name, if
+the bundle identifier is something Android or macOS rejects, if a `workspace:*`
+dependency resolves to nothing, or if a generated native project is left on the
+old identity. Half-renamed clones fail the gate instead of failing a build
+later.
+
 ## Development
 
 Prerequisites: Node 22+, pnpm 10+, and the Rust toolchain for desktop/mobile
@@ -109,7 +148,9 @@ pnpm mobile:android     # Android emulator (first run: pnpm --filter @repo/shell
 pnpm ports              # print this clone's derived ports/URLs
 pnpm stop               # stop everything this clone started (dev servers + app window)
 
-pnpm check              # typecheck + lint + arch + size + dup + knip
+pnpm rename "Acme Notes"  # make the clone yours (see above)
+
+pnpm check              # typecheck + lint + arch + size + dup + knip + security + template
 pnpm build              # production build
 ```
 

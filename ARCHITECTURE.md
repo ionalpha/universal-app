@@ -2,7 +2,7 @@
 
 This template ships an **opinionated, machine-guarded** structure. The rules
 below are enforced by `pnpm check` (see Enforcement) and by each package's
-`exports` map — not by convention alone. Violations fail the build.
+`exports` map - not by convention alone. Violations fail the build.
 
 ## Monorepo layout
 
@@ -19,7 +19,7 @@ packages/
 ```
 
 Every package exposes one public entry (`exports: { ".": ... }`), so cross-package
-**deep imports don't resolve** — you can only import the barrel.
+**deep imports don't resolve** - you can only import the barrel.
 
 ## Frontend: feature-based (`packages/client/src`)
 
@@ -32,13 +32,13 @@ Group by feature, keep the base shared. Imports flow **downward only**.
 | `components/` | lib | Shared design-system components (Button, …). |
 | `lib/` | (base) | Cross-cutting utilities (`cn`, api client). |
 
-**Features are isolated** — one feature never imports another. Share by pushing
+**Features are isolated** - one feature never imports another. Share by pushing
 code down into `components/` or `lib/`. Compose features in `app/`.
 
 ## Backend: keep the domain pure (`apps/api/src`)
 
 ```
-domain/   Business logic. Pure — no Hono, no Node, no DB. Defines the contracts.
+domain/   Business logic. Pure - no Hono, no Node, no DB. Defines the contracts.
 infra/    Implementations of those contracts (system clock now; db/push later).
 http/     The HTTP surface (Hono). Translates HTTP <-> domain.
 index.ts  Wiring: build infra, inject into the domain, mount http, start server.
@@ -46,13 +46,13 @@ index.ts  Wiring: build infra, inject into the domain, mount http, start server.
 
 `domain/` must not import `infra/` or `http/`. New capabilities (data, push,
 storage) arrive as a **new contract in `domain/` + a new implementation in
-`infra/`** — the domain never changes shape to accommodate them. (If you like
+`infra/`** - the domain never changes shape to accommodate them. (If you like
 the formal name, this is a domain/infrastructure split, a.k.a. ports & adapters.)
 
 ## Rust core (`apps/shell/src-tauri`)
 
 Single crate, module-per-concern. `main.rs` is a thin entry; `lib.rs` holds
-`run()`, shared by desktop and mobile, plus `ipc()` — the one place commands are
+`run()`, shared by desktop and mobile, plus `ipc()` - the one place commands are
 registered.
 
 ```
@@ -73,7 +73,7 @@ command cannot exist at runtime without also existing in TypeScript.
 | `apps/shell/src/bindings.ts` | **Generated.** Committed, never edited, excluded from Biome. |
 | `apps/shell/src/ipc.ts` | The hand-written wrapper app code imports. Converts the generated `Result` into a thrown `IpcError`. |
 
-Errors carry a stable `key`, not a sentence — the Rust core never decides what
+Errors carry a stable `key`, not a sentence - the Rust core never decides what
 the user reads, so the app stays translatable. `detail` is for logs.
 
 The generated file is committed so a fresh clone can typecheck without a Rust
@@ -301,6 +301,48 @@ decision costs nothing to keep.
 is the kill-switch) is written and arms itself the first time `gen/apple`
 exists on the machine running `pnpm security`.
 
+## Template identity: one table, read in both directions
+
+A clone's name lives in a dozen places across two toolchains: npm workspace,
+Cargo package, Cargo.lock, Tauri product name and bundle identifier, two
+`index.html` titles, the PWA manifest, the in-app brand, the README. Renaming
+by hand updates the ones you remember, and the half that is left behind is
+what ships.
+
+`scripts/identity.mjs` holds those places as one table, and both directions
+read it. `pnpm rename` writes every entry from a single display name; the slug
+used by npm and Cargo is derived from that name rather than stored beside it,
+so the two cannot disagree. `pnpm template` reads every entry back and compares
+it to the same source of truth.
+
+The check deliberately does not keep a list of "template tokens to grep for".
+Such a list is only as current as the last person who added a site to it. A
+comparison against the product name stays correct as the table grows, and a
+site that stops being readable is itself a failure - a site that cannot be read
+is a site that cannot be renamed.
+
+What it enforces beyond spelling, each of which fails a build somewhere far
+from its cause:
+
+- **`main.rs` calls the lib crate by name.** The lib is `app_lib`, deliberately
+  identity-free, so a rename never touches it. Mismatch the pair and the app
+  has no entry point, which nothing reports until the first `cargo build`.
+- **Cargo.lock names the crate.** A local `cargo build` silently repairs a
+  stale lockfile; `cargo build --locked`, which CI and release builds use,
+  does not.
+- **The bundle identifier is legal on every platform.** At least two segments,
+  no Java or Kotlin keyword in any segment (it becomes the Android package), no
+  `.app` suffix (it collides with the macOS bundle directory), never the Tauri
+  scaffold default.
+- **The workspace graph resolves and has no orphans.** Every `workspace:*`
+  dependency names a real package, and a package nothing depends on is dead
+  weight a clone inherits unless it is listed as intentionally unconsumed with
+  a reason (`@repo/db` is, being the persistence offering a clone wires up
+  itself).
+- **Generated native projects match the current identity.** `gen/` is
+  git-ignored and built around the identifier of the moment it was generated;
+  left stale after a rename, a device installs the app twice.
+
 ## Enforcement
 
 `pnpm check` runs the whole gate (also in the pre-push hook + CI):
@@ -312,6 +354,7 @@ exists on the machine running `pnpm security`.
 - `pnpm knip` - no unused files, deps, or exports.
 - `pnpm bindings:check` - the generated IPC bindings still match the Rust commands.
 - `pnpm security` - the webview CSP and capability grants have not been widened (above).
+- `pnpm template` - the clone has one identity, and the Rust entry point matches the lib (above).
 - `pnpm build` - also enforces the gzip bundle budgets (below).
 - Package `exports` maps block deep imports across packages.
 
@@ -352,7 +395,7 @@ at stock - and budgeted, because a one-time cleanup nothing enforces will drift.
 | `apps/web` JS | ~116 kB gzip (budget 140) | `pnpm build` |
 | `apps/shell` JS | ~122 kB gzip (budget 145) | `pnpm build` |
 | CSS, either app | ~3.4 kB gzip (budget 8) | `pnpm build` |
-| `src-tauri/target` after a debug build | ~1.5 GB | — |
+| `src-tauri/target` after a debug build | ~1.5 GB | - |
 
 The Rust target directory is large by nature and almost entirely debug
 information: the built `app_lib.dll` is ~140 kB. `[profile.dev]` therefore emits
@@ -369,8 +412,8 @@ rather than only at the moment it breaks.
 ## Patterns that keep it scaling
 
 - **DB schema:** one table per file under `packages/db/src/schema/`, re-exported
-  from the barrel — the schema never becomes one giant file.
-- **App entry:** every shell calls `mountApp()` from `@repo/client` — the mount
+  from the barrel - the schema never becomes one giant file.
+- **App entry:** every shell calls `mountApp()` from `@repo/client` - the mount
   boilerplate is written once, never copy-pasted per app.
 - Split any file approaching the size cap into a folder of focused modules.
 

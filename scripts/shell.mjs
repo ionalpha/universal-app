@@ -3,6 +3,7 @@ import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { devCsp } from "./csp.mjs";
+import { readIdentity } from "./identity.mjs";
 import { devEnv, repoRoot, resolvePlan, writeState } from "./ports.mjs";
 
 // Launches the shell (Tauri) app across native platforms with derived ports:
@@ -46,7 +47,7 @@ if (lanHost) {
 }
 
 // We start the API + shell Vite server OURSELVES (not via Tauri's
-// beforeDevCommand) so there's no cwd/quoting guesswork — dev.mjs resolves the
+// beforeDevCommand) so there's no cwd/quoting guesswork - dev.mjs resolves the
 // derived ports the same way Tauri's overlay does. Tauri then just waits for
 // the devUrl to come up and opens the window.
 const front = spawn("node", [join(repoRoot, "scripts", "dev.mjs"), "shell"], {
@@ -77,7 +78,9 @@ const overlay = {
     },
   },
 };
-const overlayPath = join(tmpdir(), `universal-app.tauri.${ports.shell}.json`);
+// Named after the clone, not the template: two templated apps dev-running at
+// once must not write the same temp file.
+const overlayPath = join(tmpdir(), `${readIdentity(repoRoot).slug}.tauri.${ports.shell}.json`);
 writeFileSync(overlayPath, JSON.stringify(overlay));
 
 console.log(`\n  ${platform} → ${urls.shell}  (api ${urls.api})\n`);

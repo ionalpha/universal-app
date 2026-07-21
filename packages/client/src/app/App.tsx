@@ -7,6 +7,7 @@ import { ThemeToggle } from "../components/theme-toggle";
 import { CounterButton } from "../features/counter";
 import { GreetingForm } from "../features/greeting";
 import { HealthStatus } from "../features/health-status";
+import { APP_NAME } from "./app-name";
 import { AppProviders } from "./providers";
 
 export interface AppProps {
@@ -18,7 +19,7 @@ export interface AppProps {
 
 /**
  * The single shared frontend. web, desktop, iOS and Android all mount THIS
- * component — one artifact, four targets — composed from the design system.
+ * component - one artifact, four targets - composed from the design system.
  */
 export function App({ platform, apiUrl }: AppProps) {
   return (
@@ -27,7 +28,7 @@ export function App({ platform, apiUrl }: AppProps) {
         header={
           <Container>
             <HStack className="h-14 justify-between">
-              <span className="font-semibold">Universal App</span>
+              <span className="font-semibold">{APP_NAME}</span>
               <ThemeToggle />
             </HStack>
           </Container>
@@ -35,7 +36,7 @@ export function App({ platform, apiUrl }: AppProps) {
         footer={
           <Container>
             <p className="py-4 text-center text-xs text-muted-foreground">
-              web · desktop · iOS · Android — one shared frontend
+              web · desktop · iOS · Android - one shared frontend
             </p>
           </Container>
         }

@@ -27,7 +27,9 @@ pub fn greet(name: &str) -> Result<String> {
     if name.is_empty() {
         return Err(Error::invalid_input("greet.emptyName", "name was empty or whitespace"));
     }
-    Ok(format!("Hello, {name}! The Universal App shell is running."))
+    // The product name comes from Cargo's metadata rather than a literal, so a
+    // renamed clone cannot end up greeting users with the template's name.
+    Ok(format!("Hello, {name}! The {} shell is running.", env!("CARGO_PKG_DESCRIPTION")))
 }
 
 /// Real capability rather than another toy: the frontend is shared across web,
