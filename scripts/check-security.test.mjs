@@ -127,6 +127,146 @@ test("dropping a hardened protocol header fails", () => {
   assert.match(output, /X-Content-Type-Options/);
 });
 
+// A faithful miniature of what `tauri android init` actually generates (audited
+// 2026-07-21): the cleartext placeholder in the manifest, "false" in
+// defaultConfig, "true" only in the debug build type. Tests tamper one piece.
+const androidManifest = (application = "") => `<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application android:usesCleartextTraffic="\${usesCleartextTraffic}">
+    <activity android:name=".MainActivity" android:exported="true">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+    </activity>
+    ${application}
+  </application>
+</manifest>`;
+
+const androidGradle = `android {
+  defaultConfig {
+    manifestPlaceholders["usesCleartextTraffic"] = "false"
+  }
+  buildTypes {
+    getByName("debug") {
+      manifestPlaceholders["usesCleartextTraffic"] = "true"
+    }
+    getByName("release") {
+      isMinifyEnabled = true
+    }
+  }
+}`;
+
+function writeAndroidFixture(root, { manifest = androidManifest(), gradle = androidGradle } = {}) {
+  const app = join(root, "apps/shell/src-tauri/gen/android/app");
+  mkdirSync(join(app, "src/main"), { recursive: true });
+  writeFileSync(join(app, "src/main/AndroidManifest.xml"), manifest);
+  writeFileSync(join(app, "build.gradle.kts"), gradle);
+  return app;
+}
+
+test("a faithful copy of the generated android project passes", () => {
+  const { code, output } = check((root) => writeAndroidFixture(root));
+  assert.equal(code, 0, output);
+  assert.match(output, /android gen\/ audited/);
+});
+
+test("hardcoding usesCleartextTraffic in the manifest fails", () => {
+  const { code, output } = check((root) =>
+    writeAndroidFixture(root, {
+      manifest: androidManifest().replace(/\$\{usesCleartextTraffic\}/, "true"),
+    }),
+  );
+  assert.equal(code, 1);
+  assert.match(output, /usesCleartextTraffic="true"/);
+});
+
+test("flipping cleartext on in defaultConfig fails - it would ship in release", () => {
+  const { code, output } = check((root) =>
+    writeAndroidFixture(root, {
+      gradle: androidGradle.replace(
+        'defaultConfig {\n    manifestPlaceholders["usesCleartextTraffic"] = "false"',
+        'defaultConfig {\n    manifestPlaceholders["usesCleartextTraffic"] = "true"',
+      ),
+    }),
+  );
+  assert.equal(code, 1);
+  assert.match(output, /outside the\s+debug build type|never pins/);
+});
+
+test("registering a custom deep-link scheme fails - any app can claim it", () => {
+  const { code, output } = check((root) =>
+    writeAndroidFixture(root, {
+      manifest: androidManifest(`<intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <data android:scheme="universalapp" />
+      </intent-filter>`),
+    }),
+  );
+  assert.equal(code, 1);
+  assert.match(output, /custom scheme "universalapp:"/);
+});
+
+test("an https deep link without autoVerify fails - unverified is hijackable", () => {
+  const { code, output } = check((root) =>
+    writeAndroidFixture(root, {
+      manifest: androidManifest(`<intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <data android:scheme="https" android:host="app.example.com" />
+      </intent-filter>`),
+    }),
+  );
+  assert.equal(code, 1);
+  assert.match(output, /without android:autoVerify/);
+});
+
+test("a merged RELEASE manifest that allows cleartext fails, whatever caused it", () => {
+  const { code, output } = check((root) => {
+    const app = writeAndroidFixture(root);
+    const merged = join(app, "build/intermediates/merged_manifest/universalRelease/out");
+    mkdirSync(merged, { recursive: true });
+    writeFileSync(
+      join(merged, "AndroidManifest.xml"),
+      androidManifest().replace(/\$\{usesCleartextTraffic\}/, "true"),
+    );
+  });
+  assert.equal(code, 1);
+  assert.match(output, /merged RELEASE manifest allows cleartext/);
+});
+
+test("NSAllowsArbitraryLoads in a gen/apple Info.plist fails - ATS off entirely", () => {
+  const { code, output } = check((root) => {
+    const ios = join(root, "apps/shell/src-tauri/gen/apple/universal-app_iOS");
+    mkdirSync(ios, { recursive: true });
+    writeFileSync(
+      join(ios, "Info.plist"),
+      `<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict>
+  <key>NSAppTransportSecurity</key>
+  <dict>
+    <key>NSAllowsArbitraryLoads</key>
+    <true/>
+  </dict>
+</dict></plist>`,
+    );
+  });
+  assert.equal(code, 1);
+  assert.match(output, /NSAllowsArbitraryLoads/);
+});
+
+test("adding a cleartext LAN origin to connect-src fails - TLS or loopback only", () => {
+  const { code, output } = check((root) =>
+    editJson(root, "apps/shell/src-tauri/tauri.conf.json", (conf) => {
+      conf.app.security.csp = conf.app.security.csp.replace(
+        "connect-src",
+        "connect-src http://192.168.1.20:8787",
+      );
+    }),
+  );
+  assert.equal(code, 1);
+  assert.match(output, /not TLS or loopback/);
+});
+
 test("enabling the devtools cargo feature fails - it ships the inspector", () => {
   const { code, output } = check((root) => {
     const path = join(root, "apps/shell/src-tauri/Cargo.toml");

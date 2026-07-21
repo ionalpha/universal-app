@@ -15,7 +15,7 @@ scaffolded from it.
 
 The app is the same frontend delivered four ways: a Tauri webview on desktop
 and mobile, and a plain browser tab on the web. Threats follow the app's
-lifecycle: what runs at install, at start, at run, and at update. Four trust
+lifecycle: what runs at install, at start, at run, and at update. Five trust
 boundaries cover them. For each: what is assumed, and which control holds the
 line. Every control listed here fails closed and is enforced by `pnpm check`
 or the build; removing one breaks a named test, not just a promise.
@@ -78,12 +78,41 @@ verification, a rollback answer) are written down in ARCHITECTURE.md before
 the key exists, because they cannot be retrofitted after a first release.
 Mobile updates go through the app stores.
 
+### 5. Network and neighbouring apps → mobile app
+
+On a phone the app shares the device with every other installed app and the
+network with whoever runs the Wi-Fi. The generated native projects
+(`src-tauri/gen/`) are git-ignored, so nothing there can be trusted to a
+one-time fix - every control is either in tracked config or re-checked
+against the generated output.
+
+- Cleartext is debug-only, audited against a real build: the Android
+  manifest's `usesCleartextTraffic` is a Gradle placeholder, `false` by
+  default and `true` only in the debug build type (LAN dev needs the phone
+  to reach the Vite server over http), and the merged release manifest
+  resolves to `false`. Because WebView only honours that flag on API 26+
+  (minSdk is 24), the layer that holds everywhere is the CSP: `connect-src`
+  additions must be TLS or loopback, enforced always, `gen/` or not.
+- Deep links: none are registered today. When they are added, custom
+  schemes fail the check - any installed app can claim the same scheme and
+  receive the links, auth callbacks included. Verified App Links / Universal
+  Links only, and every inbound link is untrusted input.
+- iOS ATS: the check for `NSAllowsArbitraryLoads` is written and dormant; it
+  arms the first time `gen/apple` exists (needs a Mac).
+- Data at rest: the app stores nothing on device today. The decision for
+  when it does: secrets (tokens, keys) go in the platform keystore
+  (Android Keystore / iOS Keychain), never a plaintext file - both
+  platforms' backup systems copy plaintext files off the device.
+- Enforced by: `pnpm security` (mobile section), tamper-tested in
+  `scripts/check-security.test.mjs`.
+
 ## Accepted-open, on record
 
-- **Mobile native manifests are unaudited.** `src-tauri/gen/` is generated
-  and git-ignored, and no mobile build has been produced yet. Cleartext
-  policy (Android network security config, iOS ATS) gets audited against a
-  real build, not assumed from documentation.
+- **The mobile checks only bind where `gen/` exists.** The Android audit ran
+  against a real build on 2026-07-21 and re-runs wherever the native
+  projects exist, but until CI produces a mobile build, CI itself only
+  enforces the always-on CSP layer. The iOS check has never had a real
+  `gen/apple` to run against.
 - **CI does not yet enforce the gate.** The guards run locally (`pnpm
   check`, pre-push hook). Until CI lands, enforcement holds only for people
   who run them.

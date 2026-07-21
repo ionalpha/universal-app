@@ -265,6 +265,42 @@ design - keep it that way), and a rollback answer before the first release:
 what happens when a bad update ships, whether a user can downgrade, and who
 can trigger a signed release.
 
+## Mobile: the native projects are generated, the controls are not
+
+`tauri android/ios init` writes the native projects to `src-tauri/gen/`,
+which is git-ignored. That shapes every mobile security decision: a fix made
+inside `gen/` lasts until the next init, and review never sees what the
+scaffold generated. So controls live in tracked config or in checks that
+re-inspect the generated output on every `pnpm security` run.
+
+**Cleartext is a debug-only hole, and provably so.** Mobile dev requires the
+phone to reach the Vite server over plain http on the LAN - that is the hole.
+Audited against a real Android build: the generated manifest takes
+`usesCleartextTraffic` from a Gradle placeholder that defaultConfig pins to
+`false` and only the debug build type flips, and the merged release manifest
+resolves to `false`. The check pins all three so a regenerated or hand-edited
+`gen/` cannot regress them. The caveat that makes the CSP the real control:
+WebView only honours the cleartext flag on API 26+ while minSdk is 24, so
+`pnpm security` also rejects any `connect-src` addition that is not TLS or
+loopback - the CSP ships inside the bundle, survives regeneration, and every
+WebView version enforces it.
+
+**Deep links are verified or refused.** None exist yet; the check already
+rejects custom schemes (claimable by any installed app - the classic auth
+callback hijack) and http(s) intent-filters without `autoVerify`. When links
+land, they are App Links / Universal Links backed by a hosted
+`assetlinks.json`, and handled as untrusted input.
+
+**Device storage, decided before it exists** (same rule as the updater):
+secrets go in Android Keystore / iOS Keychain via a vetted plugin, never a
+plaintext file or the frontend's localStorage - platform backups copy
+plaintext files off the device. Nothing is stored today, so today the
+decision costs nothing to keep.
+
+**iOS is dormant, not forgotten.** The ATS check (`NSAllowsArbitraryLoads`
+is the kill-switch) is written and arms itself the first time `gen/apple`
+exists on the machine running `pnpm security`.
+
 ## Enforcement
 
 `pnpm check` runs the whole gate (also in the pre-push hook + CI):
@@ -295,6 +331,16 @@ than starting from silence. One line per pass; add to it, do not rewrite it.
   `TAURI_ENV_*` envPrefix glob documented. Left open, on record: mobile
   native manifests (no build yet), CI enforcement (deferred). Threat model:
   SECURITY.md.
+- **2026-07-21** - mobile pass against the first real Android build:
+  generated manifest + Gradle audited (cleartext placeholder is debug-only,
+  merged release manifest resolves to `false`), no deep links registered,
+  androidx `ProfileInstallReceiver` intent-filters checked (permission-gated,
+  benign). Added to `pnpm security`: Android cleartext/deep-link checks that
+  re-run against whatever `gen/` exists, a dormant iOS ATS check, and an
+  always-on TLS-or-loopback rule for `connect-src` additions (the layer every
+  WebView version enforces; the manifest flag is API 26+ only, minSdk 24).
+  Device-storage decision recorded above. iOS remains unaudited: no
+  `gen/apple` exists without a Mac.
 
 ## Build output: what "normal" looks like
 

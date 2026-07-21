@@ -86,6 +86,24 @@ if (typeof security.csp !== "string" || security.csp.trim() === "") {
     const extendable = name === "connect-src";
     const missing = sources.filter((s) => !got.includes(s));
     if (missing.length > 0) fail(`app.security.csp "${name}" is missing: ${missing.join(" ")}`);
+    if (extendable) {
+      // Added origins must be TLS or loopback. This is the cleartext control
+      // that holds on every platform: the Android manifest's cleartext flag is
+      // only honoured by WebView on API 26+ (minSdk is 24), and gen/ is
+      // regenerated, but the CSP ships inside the bundle and WebView enforces
+      // connect-src everywhere. Loopback is allowed because it never crosses a
+      // network.
+      const loopback = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+      for (const extra of got.filter((s) => !sources.includes(s))) {
+        if (/^(https|wss):\/\//.test(extra) || loopback.test(extra)) continue;
+        fail(
+          `app.security.csp "connect-src" adds ${extra}, which is not TLS or loopback.\n` +
+            "    A release build must never talk cleartext across a network: on mobile this is\n" +
+            "    traffic on someone else's Wi-Fi, and the CSP is the only layer every WebView\n" +
+            "    version enforces. Use https:// (or wss://) for real origins.",
+        );
+      }
+    }
     if (!extendable) {
       const extra = got.filter((s) => !sources.includes(s));
       if (extra.length > 0) {
@@ -354,6 +372,150 @@ for (const id of declared) {
   }
 }
 
+// --- Mobile: Android cleartext + deep links, iOS ATS -------------------------
+
+// `tauri android/ios init` generates the native projects under gen/, which is
+// git-ignored - so a hand-fix inside it lasts exactly until the next init, and
+// nothing in review sees what the scaffold put there. These checks run against
+// whatever gen/ exists on this machine (they arm in CI the day CI produces a
+// mobile build); the always-on layer is the connect-src TLS rule above.
+//
+// What the scaffold ships today, audited against a real build (2026-07-21):
+// the manifest's usesCleartextTraffic is a Gradle placeholder, "false" in
+// defaultConfig and flipped to "true" only in the debug build type, and the
+// merged release manifest comes out "false". These checks pin that shape so a
+// regenerated or hand-edited gen/ cannot silently regress it.
+
+/** All AndroidManifest.xml paths under dir (recursive). */
+function findManifests(dir) {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+    entry.isDirectory()
+      ? findManifests(join(dir, entry.name))
+      : entry.name === "AndroidManifest.xml"
+        ? [join(dir, entry.name)]
+        : [],
+  );
+}
+
+// Deep links: a custom scheme is claimable by any installed app - whoever else
+// registers universalapp:// receives the links, auth callbacks included. Only
+// verified App Links (https + autoVerify, proven via assetlinks.json) bind a
+// link to this app and no other.
+function auditDeepLinks(where, xml) {
+  for (const match of xml.matchAll(/<intent-filter[^>]*>[\s\S]*?<\/intent-filter>/g)) {
+    const filter = match[0];
+    const schemes = [...filter.matchAll(/android:scheme="([^"]+)"/g)].map((m) => m[1]);
+    for (const scheme of schemes.filter((s) => s !== "http" && s !== "https")) {
+      fail(
+        `${where} registers the custom scheme "${scheme}:". Any installed app can claim\n` +
+          "    the same scheme and receive those links - auth callbacks included. Use verified\n" +
+          '    App Links instead: an https intent-filter with android:autoVerify="true" and a\n' +
+          "    hosted assetlinks.json, so the OS binds the link to this app cryptographically.",
+      );
+    }
+    if (
+      schemes.some((s) => s === "http" || s === "https") &&
+      !/android:autoVerify="true"/.test(filter)
+    ) {
+      fail(
+        `${where} has an http(s) intent-filter without android:autoVerify="true". Without\n` +
+          "    verification it is an unverified deep link - another app can register the same\n" +
+          "    host and the user gets a chooser, or worse, a silent hijack on older Android.",
+      );
+    }
+  }
+}
+
+const mobileAudited = [];
+const genAndroid = join(crateDir, "gen", "android");
+if (existsSync(genAndroid)) {
+  mobileAudited.push("android");
+  const manifestPath = join(genAndroid, "app", "src", "main", "AndroidManifest.xml");
+  const manifest = readFileSync(manifestPath, "utf8");
+  const where = "gen/android main AndroidManifest.xml";
+
+  const cleartext = manifest.match(/android:usesCleartextTraffic="([^"]*)"/)?.[1];
+  if (cleartext !== "${usesCleartextTraffic}" && cleartext !== "false") {
+    fail(
+      `${where} sets usesCleartextTraffic="${cleartext}". The scaffold uses the Gradle\n` +
+        '    placeholder ${usesCleartextTraffic} so release resolves to "false" and only the\n' +
+        "    debug build type (LAN dev against the Vite server) flips it. Hardcoding it ships\n" +
+        "    cleartext to every user on every network.",
+    );
+  }
+  auditDeepLinks(where, manifest);
+
+  // The placeholder is only as good as the Gradle file that fills it: "false"
+  // must be the default, and "true" must appear only inside the debug block.
+  const gradle = readFileSync(join(genAndroid, "app", "build.gradle.kts"), "utf8");
+  if (!/manifestPlaceholders\["usesCleartextTraffic"\]\s*=\s*"false"/.test(gradle)) {
+    fail(
+      'gen/android build.gradle.kts never pins usesCleartextTraffic to "false" in\n' +
+        "    defaultConfig, so the release value is whatever the manifest merger decides.",
+    );
+  }
+  for (const m of gradle.matchAll(/manifestPlaceholders\["usesCleartextTraffic"\]\s*=\s*"true"/g)) {
+    const owner = ['getByName("debug")', 'getByName("release")', "defaultConfig"]
+      .map((block) => [block, gradle.lastIndexOf(block, m.index)])
+      .sort((a, b) => b[1] - a[1])[0];
+    if (owner[1] === -1 || owner[0] !== 'getByName("debug")') {
+      fail(
+        'gen/android build.gradle.kts sets usesCleartextTraffic = "true" outside the\n' +
+          "    debug build type. Cleartext exists for one purpose - the phone reaching the\n" +
+          "    Vite dev server over LAN http - and that is a debug-only need.",
+      );
+    }
+  }
+
+  // The merged release manifest is what the OS actually reads. If a release
+  // variant has been processed on this machine, hold it to the same line -
+  // this catches a regression through any path (plugin, override, merger rule)
+  // rather than only the two files above.
+  for (const dirName of ["merged_manifest", "merged_manifests"]) {
+    const base = join(genAndroid, "app", "build", "intermediates", dirName);
+    if (!existsSync(base)) continue;
+    for (const merged of findManifests(base).filter((p) => /[Rr]elease/.test(p))) {
+      const content = readFileSync(merged, "utf8");
+      if (/android:usesCleartextTraffic="true"/.test(content)) {
+        fail(
+          "a merged RELEASE manifest allows cleartext traffic:\n" +
+            `    ${merged}\n` +
+            "    Something overrode the debug-only placeholder - find it before shipping.",
+        );
+      }
+      auditDeepLinks(`merged release manifest (${dirName})`, content);
+    }
+  }
+}
+
+// iOS ATS: dormant until `tauri ios init` runs on a Mac, then enforced the
+// first time this script runs there. NSAllowsArbitraryLoads is the ATS
+// kill-switch - the iOS equivalent of shipping usesCleartextTraffic="true".
+const genApple = join(crateDir, "gen", "apple");
+if (existsSync(genApple)) {
+  mobileAudited.push("ios");
+  const findPlists = (dir) =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+      entry.isDirectory()
+        ? entry.name === "build" || entry.name.endsWith(".xcodeproj")
+          ? []
+          : findPlists(join(dir, entry.name))
+        : entry.name === "Info.plist"
+          ? [join(dir, entry.name)]
+          : [],
+    );
+  for (const plist of findPlists(genApple)) {
+    if (/<key>NSAllowsArbitraryLoads<\/key>\s*<true\s*\/>/.test(readFileSync(plist, "utf8"))) {
+      fail(
+        `${plist}\n` +
+          "    sets NSAllowsArbitraryLoads, which turns App Transport Security off for every\n" +
+          "    connection. If dev needs a LAN exception, scope it: NSExceptionDomains with the\n" +
+          "    dev host only, and only in a debug configuration.",
+      );
+    }
+  }
+}
+
 // --- Report ------------------------------------------------------------------
 
 if (errors.length > 0) {
@@ -364,7 +526,11 @@ if (errors.length > 0) {
 
 console.log(
   `✔ security: CSP enforced on shell + web (prod + dev), ${capabilityFiles.length} capability ` +
-    `file(s), ${ALLOWED_PERMISSIONS.size} plugin permission(s) granted`,
+    `file(s), ${ALLOWED_PERMISSIONS.size} plugin permission(s) granted, mobile: ${
+      mobileAudited.length > 0
+        ? `${mobileAudited.join(" + ")} gen/ audited`
+        : "gen/ absent, checks arm when the native projects exist"
+    }`,
 );
 
 // Printed so the policies the app ships are visible in CI output, not merely
