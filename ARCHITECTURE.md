@@ -91,7 +91,32 @@ the result differs, which is what stops it going stale. Regenerate with
 - `pnpm dup` — jscpd copy/paste detector (no repeated logic).
 - `pnpm knip` — no unused files, deps, or exports.
 - `pnpm bindings:check` — the generated IPC bindings still match the Rust commands.
+- `pnpm build` — also enforces the gzip bundle budgets (below).
 - Package `exports` maps block deep imports across packages.
+
+## Build output: what "normal" looks like
+
+Every scaffolded app inherits these, so the defaults are tuned rather than left
+at stock — and budgeted, because a one-time cleanup nothing enforces will drift.
+
+| Thing | Expected | Guarded by |
+|---|---|---|
+| `apps/web` JS | ~116 kB gzip (budget 140) | `pnpm build` |
+| `apps/shell` JS | ~122 kB gzip (budget 145) | `pnpm build` |
+| CSS, either app | ~3.4 kB gzip (budget 8) | `pnpm build` |
+| `src-tauri/target` after a debug build | ~1.5 GB | — |
+
+The Rust target directory is large by nature and almost entirely debug
+information: the built `app_lib.dll` is ~140 kB. `[profile.dev]` therefore emits
+`line-tables-only` for this crate (backtraces keep real file:line, stepping and
+variable inspection go) and nothing at all for dependencies, which took it from
+3.4 GB to 1.5 GB at no cost in build time. `[profile.release]` optimises for
+size, since a Tauri app is webview-bound rather than CPU-bound and binary size
+is what users download.
+
+`pnpm clean` reclaims all of it. Budgets live in `scripts/check-bundle-size.mjs`
+and print measured-vs-limit on every build, so growth is visible as a trend
+rather than only at the moment it breaks.
 
 ## Patterns that keep it scaling
 

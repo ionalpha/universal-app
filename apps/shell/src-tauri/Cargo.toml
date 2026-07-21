@@ -14,6 +14,29 @@ rust-version = "1.92"
 name = "app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+# Debug info, not code, is what makes a Tauri target directory enormous: the
+# built `app_lib.dll` is ~144 kB while the accompanying `.lib` was 726 MB with
+# the default profile. `line-tables-only` keeps backtraces pointing at real
+# file:line locations (the reason to debug-build at all) and drops the full type
+# information behind stepping and variable inspection.
+[profile.dev]
+debug = "line-tables-only"
+
+# Dependencies are a different case: ~500 crates nobody steps into. No debug
+# info at all for them. opt-level is deliberately left alone — raising it would
+# trade a much longer first build for runtime this app does not spend in Rust.
+[profile.dev.package."*"]
+debug = false
+
+# Shipped binaries. A Tauri app is webview-bound, not CPU-bound, so size is the
+# thing worth optimising: it is what users download and what stores measure.
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
