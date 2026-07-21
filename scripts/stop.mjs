@@ -1,14 +1,18 @@
 import { execFileSync } from "node:child_process";
-import { ports, repoRoot, urls } from "./ports.mjs";
+import { repoRoot, resolvePlan } from "./ports.mjs";
 
 // Stops everything this clone left running, and ONLY this clone:
-//   1. the dev servers (API/Vite) — found by their derived ports
+//   1. the dev servers (API/Vite) — found by the ports the run ACTUALLY used,
+//      which is the recorded block when a run shifted off the derived one; on
+//      Windows this is the only handle we have on them, since node.exe lives
+//      outside the clone and so escapes the path scan below
 //   2. the native shell binary (the Tauri window) — found by its executable
 //      path living under THIS clone's root; it holds no port, so ports alone
 //      would never catch it
 // Both are scoped to this clone (derived ports + this repo's path), so it's
 // safe to run blindly and won't disturb any other app or sibling clone. Used
 // by `pnpm stop`.
+const { ports, urls } = await resolvePlan();
 const targets = [ports.api, ports.web, ports.shell, ports.shellHmr];
 const isWindows = process.platform === "win32";
 

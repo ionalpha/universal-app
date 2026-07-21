@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { devEnv, ports, repoRoot, urls } from "./ports.mjs";
+import { devEnv, repoRoot, resolvePlan, writeState } from "./ports.mjs";
 
 // Launches the shell (Tauri) app across native platforms with derived ports:
 //   node scripts/shell.mjs desktop   →  tauri dev
@@ -11,7 +11,13 @@ import { devEnv, ports, repoRoot, urls } from "./ports.mjs";
 const platform = process.argv[2] ?? "desktop";
 const tauriArgs = platform === "desktop" ? ["dev"] : [platform, "dev"];
 
-const env = devEnv();
+// Resolve ONCE here, then pin the answer for the dev.mjs we spawn below via
+// DEV_PORT_BASE. If both probed independently they could settle on different
+// blocks, and the Tauri overlay would point the window at a dead port.
+const { ports, urls, base } = await resolvePlan();
+writeState(base);
+
+const env = devEnv({ ports, urls }, { DEV_PORT_BASE: String(base) });
 
 // We start the API + shell Vite server OURSELVES (not via Tauri's
 // beforeDevCommand) so there's no cwd/quoting guesswork — dev.mjs resolves the

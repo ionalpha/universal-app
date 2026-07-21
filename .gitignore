@@ -33,6 +33,9 @@ local.db*
 .env.*
 !.env.example
 
+# Resolved dev port block for this clone (see scripts/ports.mjs)
+.dev-ports.json
+
 # OS / editor
 .DS_Store
 Thumbs.db

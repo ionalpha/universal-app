@@ -128,9 +128,14 @@ Nothing is hardcoded to a port number.
 
 Blocks land in `10000..31990`, below the 32768 floor where Linux starts handing
 out ephemeral ports (Windows and macOS start at 49152, and additionally reserve
-blocks up there for Hyper-V and WSL that nothing can bind at all). Set
-`DEV_PORT_BASE` to place a clone explicitly if you would rather assign a block
-yourself than take the hash's.
+blocks up there for Hyper-V and WSL that nothing can bind at all).
+
+The block is **probed before use**, not assumed: if anything already holds one of
+the four ports, the run shifts to the next free block and says so. Probing never
+changes the answer when the ports are free, so your URLs stay the same run to run.
+The block a run settles on is recorded in `.dev-ports.json` (git-ignored) so
+`pnpm stop` targets the ports actually in use rather than the ones that were
+derived. Set `DEV_PORT_BASE` to pin a block explicitly and skip the search.
 
 Mobile is the *same* Tauri app as desktop (`apps/shell`); `tauri ios/android init`
 generates native projects under `apps/shell/src-tauri/gen/` (git-ignored).

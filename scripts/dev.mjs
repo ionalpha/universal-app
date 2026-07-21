@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { devEnv, ports, urls } from "./ports.mjs";
+import { devEnv, resolvePlan, writeState } from "./ports.mjs";
 
 // One launcher for every dev flow. It resolves the derived ports once, then
 // starts the API plus whichever frontend(s) the chosen target needs, all
@@ -24,13 +24,18 @@ if (!selected) {
   process.exit(1);
 }
 
+// Probed, not assumed: if this clone's derived block is unbindable we shift to
+// the next free one. Recorded so `pnpm stop` kills the block we actually used.
+const { ports, urls, base } = await resolvePlan();
+writeState(base);
+
 console.log(`\n  api    ${urls.api}`);
 if (selected.includes("@repo/web")) console.log(`  web    ${urls.web}`);
 if (selected.includes("@repo/shell"))
   console.log(`  shell  ${urls.shell}  (hmr ${ports.shellHmr})`);
 console.log("");
 
-const env = devEnv();
+const env = devEnv({ ports, urls });
 const children = selected.map((pkg) =>
   spawn("pnpm", ["--filter", pkg, "dev"], { env, stdio: "inherit", shell: true }),
 );

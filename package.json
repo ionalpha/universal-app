@@ -14,7 +14,7 @@
     "ports": "node scripts/ports.mjs",
     "stop": "node scripts/stop.mjs",
     "build": "turbo run build",
-    "test": "turbo run test",
+    "test": "turbo run test && node --test \"scripts/*.test.mjs\"",
     "typecheck": "turbo run typecheck",
     "lint": "biome check .",
     "format": "biome format --write .",
