@@ -37,7 +37,7 @@ const offenders = files
 
 if (offenders.length > 0) {
   console.error(
-    `✗ file-size: ${offenders.length} file(s) over ${MAX} lines — split into focused modules:`,
+    `✗ file-size: ${offenders.length} file(s) over ${MAX} lines - split into focused modules:`,
   );
   for (const { f, lines } of offenders) console.error(`  ${lines}  ${f}`);
   process.exit(1);

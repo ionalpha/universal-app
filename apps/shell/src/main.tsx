@@ -2,7 +2,7 @@ import { mountApp } from "@repo/client";
 import "./index.css";
 import { ipc } from "./ipc";
 
-// Same shared frontend as web — only the platform tag and native shell differ.
+// Same shared frontend as web - only the platform tag and native shell differ.
 const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:8787";
 
 // One Tauri app hosts desktop, iOS and Android, so the tag has to come from the

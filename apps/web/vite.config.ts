@@ -25,7 +25,7 @@ export default defineConfig({
           // The policy allows exactly the origin the bundle will call. Building
           // without VITE_API_URL bakes in the localhost fallback, so a deploy
           // pointed at a real API would have every request blocked by its own
-          // CSP — with nothing in the build output to explain why.
+          // CSP - with nothing in the build output to explain why.
           this.warn(
             "VITE_API_URL is unset, so the emitted _headers allows only the default API " +
               "origin. Set VITE_API_URL at build time when deploying.",

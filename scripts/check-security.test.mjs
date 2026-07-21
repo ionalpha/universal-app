@@ -75,7 +75,7 @@ test("the real, untampered config passes", () => {
   assert.match(output, /CSP enforced/);
 });
 
-test("nulling the CSP fails - the default most Tauri starters ship", () => {
+test("nulling the CSP fails - it is the Tauri scaffold default", () => {
   const { code, output } = check((root) =>
     editJson(root, "apps/shell/src-tauri/tauri.conf.json", (conf) => {
       conf.app.security.csp = null;

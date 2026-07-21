@@ -22,7 +22,7 @@ export default defineConfig({
     // In desktop dev the webview loads straight from this server, so Tauri
     // never touches the response and `devCsp` in tauri.conf.json would not be
     // applied to anything. Sending the header here is what makes dev enforce a
-    // policy at all — without it the strict production CSP is first exercised
+    // policy at all - without it the strict production CSP is first exercised
     // by a release build, which is the worst possible place to discover it
     // blocks something.
     headers: {

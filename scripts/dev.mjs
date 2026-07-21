@@ -40,7 +40,7 @@ const children = selected.map((pkg) =>
   spawn("pnpm", ["--filter", pkg, "dev"], { env, stdio: "inherit", shell: true }),
 );
 
-// Tear the whole group down together — if one dev server dies or the user hits
+// Tear the whole group down together - if one dev server dies or the user hits
 // Ctrl+C, don't leave orphaned processes squatting on the derived ports.
 let shuttingDown = false;
 function shutdown(code = 0) {

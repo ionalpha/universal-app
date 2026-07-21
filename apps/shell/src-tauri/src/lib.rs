@@ -8,7 +8,7 @@ use tauri_specta::{collect_commands, Builder};
 /// This is the single source of truth for the IPC boundary: `run()` mounts it
 /// as the invoke handler, and the bindings test exports it to TypeScript. Both
 /// read the same builder, so a command cannot exist at runtime without also
-/// existing in `bindings.ts` — that is what makes the drift check meaningful
+/// existing in `bindings.ts` - that is what makes the drift check meaningful
 /// rather than decorative.
 pub fn ipc() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new().commands(collect_commands![

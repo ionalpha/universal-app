@@ -6,7 +6,7 @@ import { resolveApiConfig, systemClock } from "./infra";
 
 // End-to-end over the real wiring: same composition as src/index.ts, minus the
 // network listener. `app.fetch` drives a genuine Request through the full
-// domain -> infra -> http path, so this exercises the shipped data path — not a
+// domain -> infra -> http path, so this exercises the shipped data path - not a
 // mock. If the app boots and answers correctly here, `pnpm dev` will too.
 const ALLOWED = "https://app.example.com";
 const app = createRoutes(
@@ -38,8 +38,8 @@ describe("api e2e", () => {
 
 // These are regression tests, not configuration assertions. Each one fails if a
 // control is removed, so removing one is a visible act rather than a quiet
-// widening. The API previously ran `cors()` with no options, which answers
-// every one of these with `*`.
+// widening. A bare `cors()` with no options answers every one of these with
+// `*`.
 describe("api security", () => {
   const get = (headers: Record<string, string> = {}) =>
     app.fetch(new Request("http://test/health", { headers }));

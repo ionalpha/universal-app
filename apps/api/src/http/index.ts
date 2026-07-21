@@ -27,5 +27,5 @@ export function createRoutes(health: HealthService, config: ApiConfig) {
     });
 }
 
-/** RPC client type (hono/client) derives from this — no codegen. */
+/** RPC client type (hono/client) derives from this - no codegen. */
 export type AppType = ReturnType<typeof createRoutes>;

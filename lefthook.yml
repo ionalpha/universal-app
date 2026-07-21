@@ -1,6 +1,6 @@
 # Git hooks (lefthook). Installed by the root `prepare` script on `pnpm install`.
 #
-# These are FAST LOCAL FEEDBACK, not the authoritative gate — they can be
+# These are FAST LOCAL FEEDBACK, not the authoritative gate - they can be
 # bypassed with `git commit --no-verify`. CI must run the same `pnpm check`
 # (typecheck + lint + arch) so nothing that skips these hooks reaches main.
 
@@ -8,12 +8,12 @@
 pre-commit:
   parallel: true
   commands:
-    # Format + lint (Biome is Rust — milliseconds). Auto-fixes and re-stages.
+    # Format + lint (Biome is Rust - milliseconds). Auto-fixes and re-stages.
     format-lint:
       glob: "*.{js,jsx,ts,tsx,json,jsonc,css}"
       run: pnpm biome check --write --no-errors-on-unmatched {staged_files}
       stage_fixed: true
-    # Architecture boundaries on the staged TS only — catches a file that newly
+    # Architecture boundaries on the staged TS only - catches a file that newly
     # crosses a layer without cruising the whole graph.
     boundaries:
       glob: "*.{ts,tsx}"

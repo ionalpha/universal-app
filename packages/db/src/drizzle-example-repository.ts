@@ -1,7 +1,7 @@
 /**
- * ⚠️ EXAMPLE — reference only. Nothing runs this; no table is created for you.
+ * ⚠️ EXAMPLE - reference only. Nothing runs this; no table is created for you.
  * It shows the repository pattern with Drizzle + libSQL: inject a Database and
- * run typed queries. Copy the SHAPE into your own feature — do NOT build on top
+ * run typed queries. Copy the SHAPE into your own feature - do NOT build on top
  * of this file. Delete it (and schema/example.ts) once you have real tables.
  * Generate migrations with `pnpm --filter @repo/db generate` when ready.
  */

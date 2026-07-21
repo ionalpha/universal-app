@@ -1,4 +1,4 @@
-// Layer: app — composition root. Imports features/entities/shared. Nothing imports app.
+// Layer: app - composition root. Imports features/entities/shared. Nothing imports app.
 
 export type { AppProps } from "./App";
 export { App } from "./App";

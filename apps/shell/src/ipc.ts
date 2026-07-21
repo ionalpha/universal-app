@@ -1,7 +1,7 @@
 import { commands, type Error as IpcErrorPayload } from "./bindings";
 
 // The generated bindings are the contract; this is the ergonomics layer on top.
-// App code imports `ipc`, never `bindings` and never `invoke("string")` — that
+// App code imports `ipc`, never `bindings` and never `invoke("string")` - that
 // is the whole point of generating the boundary rather than hand-writing it.
 
 /**

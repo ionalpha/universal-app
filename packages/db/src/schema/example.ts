@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 /**
- * ⚠️ EXAMPLE schema — reference only. Delete this file and replace with your
+ * ⚠️ EXAMPLE schema - reference only. Delete this file and replace with your
  * own tables. Convention: one table per file under schema/, re-exported from
  * schema/index.ts, so the schema never becomes one giant file.
  */

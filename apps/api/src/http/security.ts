@@ -9,12 +9,12 @@ import { type ApiConfig, isAllowedOrigin } from "../infra/config";
 // The security middleware stack, in one place and in a deliberate order.
 //
 // This replaced a bare `app.use("*", cors())`, which sets
-// `Access-Control-Allow-Origin: *` — every page on the internet allowed to call
+// `Access-Control-Allow-Origin: *` - every page on the internet allowed to call
 // this API from a logged-in user's browser. That is also the shape behind Hono
 // advisory GHSA-88fw-hqm2-52qc (fixed in 4.12.25): a wildcard origin combined
 // with `credentials: true` reflects any Origin back with
 // `Access-Control-Allow-Credentials: true`. We do not send credentials yet, so
-// the advisory does not bite today — it bites the moment auth lands, which is
+// the advisory does not bite today - it bites the moment auth lands, which is
 // exactly when nobody will be looking at this file.
 
 /** Bodies larger than this are refused unread. Raise it when a route needs to. */
@@ -27,7 +27,7 @@ const REQUEST_TIMEOUT_MS = 10_000;
  * Mounts the stack. Order is load-bearing:
  *
  * 1. `secureHeaders` first, so its headers are on error responses too.
- * 2. `timeout` and `bodyLimit` next — cheap refusals should happen before any
+ * 2. `timeout` and `bodyLimit` next - cheap refusals should happen before any
  *    work, and `bodyLimit` must see the body before a handler reads it.
  * 3. `cors` before `csrf`, because CORS answers the preflight that CSRF's
  *    Origin check depends on.

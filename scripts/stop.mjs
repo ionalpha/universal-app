@@ -2,11 +2,11 @@ import { execFileSync } from "node:child_process";
 import { repoRoot, resolvePlan } from "./ports.mjs";
 
 // Stops everything this clone left running, and ONLY this clone:
-//   1. the dev servers (API/Vite) — found by the ports the run ACTUALLY used,
+//   1. the dev servers (API/Vite) - found by the ports the run ACTUALLY used,
 //      which is the recorded block when a run shifted off the derived one; on
 //      Windows this is the only handle we have on them, since node.exe lives
 //      outside the clone and so escapes the path scan below
-//   2. the native shell binary (the Tauri window) — found by its executable
+//   2. the native shell binary (the Tauri window) - found by its executable
 //      path living under THIS clone's root; it holds no port, so ports alone
 //      would never catch it
 // Both are scoped to this clone (derived ports + this repo's path), so it's

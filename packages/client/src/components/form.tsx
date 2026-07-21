@@ -14,7 +14,7 @@ import type { z } from "zod";
 import { Input, type InputProps } from "./input";
 import { Label } from "./label";
 
-/** useForm pre-wired with a Zod schema — the same schema the API validates with. */
+/** useForm pre-wired with a Zod schema - the same schema the API validates with. */
 export function useZodForm<TOut extends FieldValues>(
   schema: z.ZodType<TOut>,
   options?: Omit<UseFormProps<TOut>, "resolver">,

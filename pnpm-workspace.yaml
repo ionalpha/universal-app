@@ -54,7 +54,7 @@ catalog:
   "@types/react-dom": ^19.2.3
 
   # --- Language & tooling ---
-  # TS 6 (last JS-based line) — broadly tooling-compatible; TS 7 (native) is too
+  # TS 6 (last JS-based line) - broadly tooling-compatible; TS 7 (native) is too
   # new for the ecosystem (e.g. dependency-cruiser can't parse it yet).
   typescript: ^6.0.3
   "@types/node": ^26.1.1

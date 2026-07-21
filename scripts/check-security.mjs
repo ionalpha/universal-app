@@ -16,9 +16,9 @@ import {
 // This exists because the regression is always silent. Nothing fails when
 // `security.csp` goes back to null, when someone pastes `core:default` into a
 // capability to unblock an afternoon, or when 'unsafe-eval' gets added to make
-// a library work. The app keeps running; the attack surface just grows. Four of
-// the six Tauri starters surveyed for this template shipped `csp: null`, and
-// none of them shipped anything that would have told them.
+// a library work. The app keeps running; the attack surface just grows. A null
+// CSP is the Tauri scaffold default, so an app inherits a disabled policy by
+// doing nothing at all, and nothing in the toolchain mentions it.
 //
 // Every rule below fails closed: an unrecognised directive, an ungranted
 // permission and an unlisted capability file are all errors, so widening the

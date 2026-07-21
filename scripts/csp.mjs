@@ -60,7 +60,7 @@ export function cspDirectives({ dev = false, ipc = true, connect = [] } = {}) {
     // The allowlist that matters. 'self' is the app's own origin; the IPC
     // entries are the Rust bridge; everything else is an API this app was
     // deliberately pointed at. The browser build has no Rust core behind it, so
-    // it does not get the IPC sources — listing them there would be noise that
+    // it does not get the IPC sources - listing them there would be noise that
     // reads like a grant.
     "connect-src": ["'self'", ...(ipc ? TAURI_IPC : []), ...connect],
     // This app embeds nothing and is embedded by nothing, so the whole class of

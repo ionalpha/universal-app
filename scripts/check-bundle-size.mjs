@@ -15,7 +15,7 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 // Budgets are gzip kB, set a little above today's measurement: enough headroom
 // for ordinary feature work, tight enough that adding a heavy dependency has to
-// be a decision rather than an accident. Raising one is fine — doing it
+// be a decision rather than an accident. Raising one is fine - doing it
 // knowingly, in a diff someone reviews, is the point.
 const BUDGETS = [
   { app: "web", dist: "apps/web/dist", ext: ".js", budgetKb: 140 },
@@ -49,7 +49,7 @@ for (const { app, dist, ext, budgetKb } of BUDGETS) {
     // A missing dist means the build did not run or did not emit. Treating that
     // as a pass would make the gate silently vacuous, which is worse than noisy.
     console.error(
-      `  FAIL  ${app}${ext}  no build output under ${dist}/assets — did the build run?`,
+      `  FAIL  ${app}${ext}  no build output under ${dist}/assets - did the build run?`,
     );
     failed++;
     continue;
