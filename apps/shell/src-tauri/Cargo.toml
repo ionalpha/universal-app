@@ -8,6 +8,11 @@ edition = "2021"
 # older toolchain fails with "requires rustc 1.92" instead of an unstable-feature
 # error from deep inside a dependency. Verified: 1.91.1 fails, 1.97.1 builds.
 rust-version = "1.92"
+# The crate has two binaries — the app and the bindings generator — and Tauri's
+# dev command shells out to a bare `cargo run`, which refuses to guess between
+# them ("could not determine which binary to run"). Naming the default is what
+# keeps `pnpm desktop` working now that the generator exists.
+default-run = "universal-app"
 
 # The lib is what mobile (iOS/Android) links against; keep all three crate types.
 [lib]

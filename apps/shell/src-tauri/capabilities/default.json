@@ -1,7 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Default capability for the main window.",
+  "description": "Main window. Grants no plugin permissions: every native call this app makes is an app command in src/commands.rs, and app commands are not brokered by the ACL. The scaffolded core:default + opener:default this replaced exposed roughly a hundred plugin commands over IPC that no line of frontend code ever called, including the opener plugin, which only Rust uses. Add a permission here when the frontend starts calling a plugin directly, and add it to ALLOWED_PERMISSIONS in scripts/check-security.mjs in the same commit so the grant is reviewed rather than absorbed.",
+  "platforms": ["macOS", "windows", "linux", "iOS", "android"],
   "windows": ["main"],
-  "permissions": ["core:default", "opener:default"]
+  "permissions": []
 }

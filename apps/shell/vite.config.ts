@@ -1,6 +1,7 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import { devCsp } from "../../scripts/csp.mjs";
 
 // Tauri needs to know the webview URL up front; scripts/desktop.mjs derives
 // this clone's shell port and hands it to both Tauri and Vite (via SHELL_PORT)
@@ -18,6 +19,20 @@ export default defineConfig({
     port,
     strictPort: true,
     host: host || false,
+    // In desktop dev the webview loads straight from this server, so Tauri
+    // never touches the response and `devCsp` in tauri.conf.json would not be
+    // applied to anything. Sending the header here is what makes dev enforce a
+    // policy at all — without it the strict production CSP is first exercised
+    // by a release build, which is the worst possible place to discover it
+    // blocks something.
+    headers: {
+      "Content-Security-Policy": devCsp({
+        apiUrl: process.env.VITE_API_URL,
+        shellPort: port,
+        hmrPort,
+        host: host || undefined,
+      }),
+    },
     hmr: host ? { protocol: "ws", host, port: hmrPort } : undefined,
     watch: {
       // Rust recompiles on its own; don't let Vite watch it.

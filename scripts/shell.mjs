@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { devCsp } from "./csp.mjs";
 import { devEnv, repoRoot, resolvePlan, writeState } from "./ports.mjs";
 
 // Launches the shell (Tauri) app across native platforms with derived ports:
@@ -32,7 +33,20 @@ const front = spawn("node", [join(repoRoot, "scripts", "dev.mjs"), "shell"], {
 
 // Overlay points Tauri at this clone's shell port and disables its own
 // beforeDevCommand (empty string = run nothing) since we already started it.
-const overlay = { build: { devUrl: urls.shell, beforeDevCommand: "" } };
+//
+// devCsp covers the mobile path only. On desktop the webview loads directly
+// from Vite and Tauri never sees the response, so the header Vite sends is what
+// applies; on iOS/Android the dev server is proxied through Tauri's own
+// protocol, and this is the only place the policy can come from. Both are built
+// from the same function, so the two paths cannot enforce different rules.
+const overlay = {
+  build: { devUrl: urls.shell, beforeDevCommand: "" },
+  app: {
+    security: {
+      devCsp: devCsp({ apiUrl: urls.api, shellPort: ports.shell, hmrPort: ports.shellHmr }),
+    },
+  },
+};
 const overlayPath = join(tmpdir(), `universal-app.tauri.${ports.shell}.json`);
 writeFileSync(overlayPath, JSON.stringify(overlay));
 

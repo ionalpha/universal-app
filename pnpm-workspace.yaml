@@ -54,6 +54,8 @@ catalog:
   "@libsql/client": ^0.17.4
 
   # --- Tauri v2 ---
+  # No plugin-opener entry: opening external URLs goes through the open_external
+  # command in Rust, so the JS half of the plugin is dead weight and its IPC
+  # permission is one the webview does not need. See capabilities/default.json.
   "@tauri-apps/api": ^2.11.1
   "@tauri-apps/cli": ^2.11.4
-  "@tauri-apps/plugin-opener": ^2.5.0

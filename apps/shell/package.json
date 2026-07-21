@@ -13,7 +13,6 @@
   "dependencies": {
     "@repo/client": "workspace:*",
     "@tauri-apps/api": "catalog:",
-    "@tauri-apps/plugin-opener": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"
   },
