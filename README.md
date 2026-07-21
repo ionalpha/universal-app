@@ -28,7 +28,7 @@ an AI or a team from degrading the structure as it grows - this is that.
 | Web | Static SPA, deployed directly | via PWA |
 | PWA | Installable web app (service worker) | yes |
 | Desktop | Tauri v2 (Windows, macOS, Linux) | planned |
-| iOS / Android | Tauri v2 mobile (one project) | planned |
+| iOS / Android | Tauri v2 mobile (one project) | Android builds + runs; iOS needs a Mac |
 
 A single React SPA renders on every surface. Tauri provides desktop + mobile from
 one Rust core, so bundles stay small.
@@ -112,6 +112,35 @@ pnpm stop               # stop everything this clone started (dev servers + app 
 pnpm check              # typecheck + lint + arch + size + dup + knip
 pnpm build              # production build
 ```
+
+### Android toolchain
+
+The Android target builds with exactly this set (undocumented mobile setup is
+the usual reason a "universal" template is not universal in practice):
+
+- **JDK 17** (Temurin) - `sdkmanager` and the Android Gradle Plugin both
+  require it. Set `JAVA_HOME`.
+- **Android SDK** via command-line tools: `platform-tools`,
+  `platforms;android-34`, `build-tools;34.0.0`, `ndk;26.3.11579264`. Set
+  `ANDROID_HOME` to the SDK root and `NDK_HOME` to the NDK directory, and
+  accept licenses once with `sdkmanager --licenses`.
+- **Rust Android targets**: `rustup target add aarch64-linux-android
+  armv7-linux-androideabi i686-linux-android x86_64-linux-android`.
+
+Two Windows-specific traps, both fatal and neither obvious from the error's
+distance to its cause:
+
+- `tauri.conf.json` `version` must be `0.0.1` or higher - Android rejects
+  `0.0.0` at build time.
+- **Developer Mode must be on** (Settings → System → For developers). The
+  build symlinks the compiled `.so` into the Gradle project and Windows
+  denies symlink creation without it.
+
+`tauri android build --debug --target aarch64` produces the device APK;
+add `--target x86_64` for an emulator image, since the emulator runs the
+host architecture. Artifacts land under
+`apps/shell/src-tauri/gen/android/app/build/outputs/`. iOS requires a Mac
+with Xcode and remains unproven until that hardware exists.
 
 **Environment variables have a hard public/private boundary.** A `VITE_` prefix
 means *public, permanently, on every platform*: Vite inlines it into the bundle,
