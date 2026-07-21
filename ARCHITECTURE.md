@@ -279,6 +279,23 @@ can trigger a signed release.
 - `pnpm build` - also enforces the gzip bundle budgets (below).
 - Package `exports` maps block deep imports across packages.
 
+### Security audit log
+
+What was reviewed and when, so the next reviewer knows where to start rather
+than starting from silence. One line per pass; add to it, do not rewrite it.
+
+- **2026-07-21** - full-surface pass: API (CORS allowlist derived + tested,
+  CSRF, headers, body limit), webview (CSP on all targets, capabilities/ACL,
+  protocol headers, devtools, Brownfield decision recorded), supply chain
+  (install-time controls on, `pnpm audit`/`cargo audit`/`cargo deny` clean
+  with time-boxed ignores), bundle secrets (envPrefix guard + dist scan,
+  planted-key tested), dev servers (LAN warning, derived-port CSP in dev),
+  updater (absent, trust requirements pre-written). Found and fixed along
+  the way: wide-open `cors()`, no web CSP, `pnpm audit` failing, dead
+  `TAURI_ENV_*` envPrefix glob documented. Left open, on record: mobile
+  native manifests (no build yet), CI enforcement (deferred). Threat model:
+  SECURITY.md.
+
 ## Build output: what "normal" looks like
 
 Every scaffolded app inherits these, so the defaults are tuned rather than left

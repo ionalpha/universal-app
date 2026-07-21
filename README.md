@@ -206,7 +206,9 @@ origin to `connect-src` in `app.security.csp`
 (`apps/shell/src-tauri/tauri.conf.json`) for the desktop app. If you add
 anything else that loads from another origin, widen `cspDirectives()` in
 `scripts/csp.mjs` so dev and production stay in step. See
-[ARCHITECTURE.md](ARCHITECTURE.md) for the full model.
+[ARCHITECTURE.md](ARCHITECTURE.md) for the full model, and
+[SECURITY.md](SECURITY.md) for the threat model and how to report a
+vulnerability.
 
 ## Example files
 

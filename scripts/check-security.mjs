@@ -24,7 +24,12 @@ import {
 // permission and an unlisted capability file are all errors, so widening the
 // surface takes an edit here and shows up in review as one.
 
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+// SECURITY_CHECK_ROOT exists so the regression test can point the check at a
+// deliberately tampered copy of the config; every real invocation checks the
+// repo itself.
+const repoRoot = process.env.SECURITY_CHECK_ROOT
+  ? resolve(process.env.SECURITY_CHECK_ROOT)
+  : resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const crateDir = join(repoRoot, "apps", "shell", "src-tauri");
 const configPath = join(crateDir, "tauri.conf.json");
 const capabilitiesDir = join(crateDir, "capabilities");
