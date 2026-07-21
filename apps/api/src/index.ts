@@ -1,10 +1,14 @@
 import { serve } from "@hono/node-server";
 import { createHealthService } from "./domain";
 import { createRoutes } from "./http";
-import { systemClock } from "./infra";
+import { resolveApiConfig, systemClock } from "./infra";
 
 // Wire infrastructure into the domain, mount the HTTP layer, start the server.
-const app = createRoutes(createHealthService(systemClock));
+// Config is resolved here, at the composition root, so nothing below it reads
+// the environment. In production an unset ALLOWED_ORIGINS throws here and the
+// process never starts, which is the intended behaviour.
+const config = resolveApiConfig();
+const app = createRoutes(createHealthService(systemClock), config);
 
 export type { AppType } from "./http";
 

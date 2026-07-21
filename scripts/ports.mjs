@@ -175,6 +175,12 @@ function warn(...lines) {
  * PORT, and the frontends read VITE_API_URL to find the API. Takes the resolved
  * plan explicitly so nothing can accidentally launch on the derived block while
  * the rest of the run uses a shifted one.
+ *
+ * ALLOWED_ORIGINS is the API's CORS allowlist. It is derived here for the same
+ * reason the CSP is (see csp.mjs): this clone's origins are already known, so a
+ * hand-maintained list would only ever be a chance to get it wrong. The shell's
+ * own `tauri://localhost` origins are added by the API itself, since those are
+ * fixed by Tauri rather than by this block.
  */
 export function devEnv(plan, extra = {}) {
   return {
@@ -184,6 +190,7 @@ export function devEnv(plan, extra = {}) {
     SHELL_PORT: String(plan.ports.shell),
     SHELL_HMR_PORT: String(plan.ports.shellHmr),
     VITE_API_URL: plan.urls.api,
+    ALLOWED_ORIGINS: [plan.urls.web, plan.urls.shell].join(","),
     ...extra,
   };
 }
