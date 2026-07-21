@@ -62,7 +62,11 @@ export default defineConfig({
       ignored: ["**/src-tauri/**"],
     },
   },
-  // Env vars starting with these are exposed to the client.
+  // Env vars starting with these are exposed to the client. Vite matches
+  // prefixes literally (no globs), so the doc-standard "TAURI_ENV_*" entry
+  // exposes nothing - which is correct: TAURI_ENV_* is only read at build
+  // time via process.env above, and no TAURI_-prefixed value may ever reach
+  // the bundle (that is how GHSA-2rcp-jvr4-r259 shipped a signing key).
   envPrefix: ["VITE_", "TAURI_ENV_*"],
   build: {
     // Tauri uses Chromium on Windows/Linux and WebKit on macOS/iOS.

@@ -13,7 +13,11 @@ import { fileURLToPath } from "node:url";
 // to every dist/.
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const distDirs = ["apps/web/dist", "apps/shell/dist"];
+// BUNDLE_SECRETS_DIRS exists so the regression test can point the scan at a
+// fixture; every real invocation scans the shipped outputs.
+const distDirs = process.env.BUNDLE_SECRETS_DIRS
+  ? process.env.BUNDLE_SECRETS_DIRS.split(",")
+  : ["apps/web/dist", "apps/shell/dist"];
 
 // Extensions that carry no text worth scanning. Everything else is read.
 const BINARY = new Set([
@@ -71,7 +75,7 @@ const errors = [];
 let scanned = 0;
 
 for (const distDir of distDirs) {
-  const dir = join(repoRoot, distDir);
+  const dir = resolve(repoRoot, distDir);
   let files;
   try {
     files = [...walk(dir)];

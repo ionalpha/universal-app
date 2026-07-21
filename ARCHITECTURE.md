@@ -232,6 +232,39 @@ warnings` (without `--deny` it exits 0 over findings) and `cargo deny check`
 live in `apps/shell/src-tauri/.cargo/audit.toml` with a reason and review date
 each - a time-boxed mute, not a permanent one.
 
+## Updates: an auto-updater is a remote code execution channel
+
+No updater is configured, and that is a decision, not a gap. An update
+channel is a signed pipe that runs arbitrary code on every user's machine,
+and a template that silently phones home is a worse default than one that
+does not update. Desktop distribution works without it; mobile updates go
+through the stores regardless. The trust properties below are settled now
+because retrofitting them after a first release means rotating a key that
+installed binaries already trust - and losing the Tauri updater private key
+means never shipping an update again.
+
+**Key custody, decided before the key exists.** `TAURI_SIGNING_PRIVATE_KEY`
+and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` live in CI secrets plus an offline
+backup in a password manager - never in the repo, never in a `.env` on a
+machine that runs builds. The release workflow that holds them is the
+highest-value target in the repo and gets its own protected environment.
+
+**The leak path is tested, not assumed.** GHSA-2rcp-jvr4-r259 put the
+updater signing key inside shipped frontends via `envPrefix: ["VITE_",
+"TAURI_"]` copied from documentation. Two independent layers close it: the
+`envPrefix` guard in `pnpm security` (config cannot widen), and the bundle
+secret scan in `pnpm build` (whatever the mechanism, the key's value or
+name in any `dist/` fails the build). `scripts/check-bundle-secrets.test.mjs`
+plants a fake signing key and asserts the scan fails - so removing either
+control breaks the test suite, not just the promise.
+
+**When an updater is enabled**, the non-negotiables are already written
+down: HTTPS-only endpoint listed in the CSP's `connect-src`, signature
+verification on every artifact (Tauri's updater refuses unsigned bundles by
+design - keep it that way), and a rollback answer before the first release:
+what happens when a bad update ships, whether a user can downgrade, and who
+can trigger a signed release.
+
 ## Enforcement
 
 `pnpm check` runs the whole gate (also in the pre-push hook + CI):
