@@ -34,6 +34,25 @@ export default defineConfig({
       }),
     },
     hmr: host ? { protocol: "ws", host, port: hmrPort } : undefined,
+    // The LAN bind (TAURI_DEV_HOST, required for on-device mobile dev) is the
+    // precondition for the recurring Vite dev-server file-read CVEs
+    // (CVE-2026-39364, CVE-2026-39363, CVE-2025-30208 were all this shape), so
+    // the server is configured as if the network were hostile:
+    // - allowedHosts: only the LAN host itself, never `true`. A malicious page
+    //   can point a hostname it controls at this machine (DNS rebinding) and
+    //   talk to the dev server as same-origin; the Host check breaks that.
+    // - cors false: no cross-origin page can read responses. The webview loads
+    //   same-origin, and the mobile proxy fetches server-side, so nothing
+    //   legitimate needs CORS here.
+    // - fs.deny on top of strict: the serving allow-list is the monorepo root
+    //   (wider than a single-package project), so the files an attacker would
+    //   actually want are denied by name as a second layer.
+    allowedHosts: host ? [host] : [],
+    cors: false,
+    fs: {
+      strict: true,
+      deny: ["**/.env*", "**/*.pem", "**/.dev-ports.json", "**/src-tauri/**"],
+    },
     watch: {
       // Rust recompiles on its own; don't let Vite watch it.
       ignored: ["**/src-tauri/**"],

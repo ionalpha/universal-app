@@ -65,5 +65,14 @@ export default defineConfig({
     headers: {
       "Content-Security-Policy": webCsp({ apiUrl, dev: true, port }),
     },
+    // Same dev-server hardening as the shell (see apps/shell/vite.config.ts):
+    // no foreign Host headers, no cross-origin reads, and the secret-bearing
+    // files denied by name on top of the strict serving allow-list.
+    allowedHosts: [],
+    cors: false,
+    fs: {
+      strict: true,
+      deny: ["**/.env*", "**/*.pem", "**/.dev-ports.json", "**/src-tauri/**"],
+    },
   },
 });

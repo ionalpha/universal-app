@@ -20,6 +20,31 @@ writeState(base);
 
 const env = devEnv({ ports, urls }, { DEV_PORT_BASE: String(base) });
 
+// On-device mobile dev is the one case the dev servers leave loopback: the
+// phone has to reach Vite and the API over the network. TAURI_DEV_HOST opts
+// in (Vite binds it via apps/shell/vite.config.ts), the API bind widens with
+// it, and both URLs are rewritten so the device talks to the LAN address.
+// Vite's allowedHosts/cors/fs hardening assumes this network is hostile, but
+// the honest summary is still: while this runs, these ports are open to
+// everyone on the network.
+const lanHost = process.env.TAURI_DEV_HOST;
+if (lanHost) {
+  env.API_HOST = "0.0.0.0";
+  env.VITE_API_URL = `http://${lanHost}:${ports.api}`;
+  urls.shell = `http://${lanHost}:${ports.shell}`;
+  console.error(
+    [
+      "",
+      `  ⚠ TAURI_DEV_HOST=${lanHost} - the dev servers are now on the local network:`,
+      `      shell  http://${lanHost}:${ports.shell}  (+ HMR ws on ${ports.shellHmr})`,
+      `      api    http://${lanHost}:${ports.api}`,
+      "    Anyone on this network can reach them for as long as this runs.",
+      "    Use a network you trust; unset TAURI_DEV_HOST for simulator/desktop dev.",
+      "",
+    ].join("\n"),
+  );
+}
+
 // We start the API + shell Vite server OURSELVES (not via Tauri's
 // beforeDevCommand) so there's no cwd/quoting guesswork — dev.mjs resolves the
 // derived ports the same way Tauri's overlay does. Tauri then just waits for
@@ -43,7 +68,12 @@ const overlay = {
   build: { devUrl: urls.shell, beforeDevCommand: "" },
   app: {
     security: {
-      devCsp: devCsp({ apiUrl: urls.api, shellPort: ports.shell, hmrPort: ports.shellHmr }),
+      devCsp: devCsp({
+        apiUrl: env.VITE_API_URL,
+        shellPort: ports.shell,
+        hmrPort: ports.shellHmr,
+        host: lanHost,
+      }),
     },
   },
 };

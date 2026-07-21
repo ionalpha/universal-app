@@ -1,4 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cspDirectives, devCsp, serializeCsp, webCsp, webHeadersFile } from "./csp.mjs";
@@ -210,6 +211,39 @@ for (const configFile of ["apps/shell/vite.config.ts", "apps/web/vite.config.ts"
         "    which is how GHSA-2rcp-jvr4-r259 shipped an updater signing key to users.",
     );
   }
+}
+
+// --- Vite version floor ------------------------------------------------------
+
+// The dev server has a recurring file-read CVE class (CVE-2026-39364 and
+// CVE-2026-39363 fixed in 8.0.5, CVE-2025-30208 the year before), and mobile
+// dev requires binding it to the LAN. `pnpm audit` catches a *published*
+// advisory; this floor catches a downgrade below the known-patched line in the
+// window before one is published. Raise it when the next dev-server CVE lands.
+const VITE_FLOOR = [8, 0, 5];
+for (const app of ["apps/shell", "apps/web"]) {
+  // Resolved from the app itself: pnpm does not hoist, and what matters is the
+  // version each dev server actually runs, not a root copy.
+  const appRequire = createRequire(join(repoRoot, app, "package.json"));
+  const viteVersion = JSON.parse(
+    readFileSync(appRequire.resolve("vite/package.json"), "utf8"),
+  ).version;
+  if (compareVersions(viteVersion.split(".").map(Number), VITE_FLOOR) < 0) {
+    fail(
+      `${app} resolves vite ${viteVersion}, below the ${VITE_FLOOR.join(".")} security floor.\n` +
+        "    Versions below it carry known dev-server file-read vulnerabilities\n" +
+        "    (CVE-2026-39364/-39363), and mobile dev puts that server on the LAN.\n" +
+        "    Do not lower the floor.",
+    );
+  }
+}
+
+/** Lexicographic compare of [major, minor, patch] arrays. */
+function compareVersions(a, b) {
+  for (let i = 0; i < 3; i += 1) {
+    if ((a[i] ?? 0) !== (b[i] ?? 0)) return (a[i] ?? 0) - (b[i] ?? 0);
+  }
+  return 0;
 }
 
 // --- Capabilities ------------------------------------------------------------

@@ -175,6 +175,16 @@ and `connect-src` as an explicit allowlist.
 disabled or edited CSP, a wildcard source, a capability grant outside the
 allowlist. `pnpm security --print` shows every policy.
 
+**Dev servers stay off the network.** Vite and the API bind loopback; only
+on-device mobile dev needs more, so setting `TAURI_DEV_HOST` widens both binds
+and prints exactly which ports just became reachable by everyone on the
+network. The dev servers treat that network as hostile either way: explicit
+`allowedHosts` (blocks DNS rebinding), CORS off, and a strict serving
+allow-list with `.env*`, `*.pem`, `.dev-ports.json` and `src-tauri/` denied by
+name. `pnpm security` also enforces a minimum Vite version, since dev-server
+file-read vulnerabilities recur and a downgrade would reintroduce a patched
+one silently.
+
 **Supply chain.** `pnpm-workspace.yaml` turns on pnpm's supply-chain controls
 (all opt-in on pnpm 10): a 3-day cooldown before newly published versions
 resolve (`minimumReleaseAge`), publisher trust checks

@@ -64,7 +64,8 @@ export function planFor(base) {
 // the OS still refuses (Windows' reserved Hyper-V/WSL ranges answer EACCES with
 // no process behind them), which a connect test reports as free.
 //
-// Bound on 0.0.0.0 because the API binds the wildcard address; a port held only
+// Bound on 0.0.0.0 so a port held on any IPv4 interface counts as taken (the
+// servers bind loopback in dev, but mobile dev widens them); a port held only
 // on ::1 by another process can still slip through, which is why a shifted
 // block is a best effort and strictPort remains the backstop.
 function bindable(port) {

@@ -12,7 +12,15 @@ const app = createRoutes(createHealthService(systemClock), config);
 
 export type { AppType } from "./http";
 
+// Loopback in dev: the frontends run on this machine, so nothing on the
+// network has any business reaching the API. The two exceptions set API_HOST
+// themselves: production (a container must bind the wildcard for its edge to
+// route to it - NODE_ENV covers that) and on-device mobile dev, where
+// scripts/shell.mjs widens the bind so the phone can reach the API and warns
+// about what that exposes.
 const port = Number(process.env.PORT ?? 8787);
-serve({ fetch: app.fetch, port }, (info) => {
-  console.log(`API listening on http://localhost:${info.port}`);
+const hostname =
+  process.env.API_HOST ?? (process.env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1");
+serve({ fetch: app.fetch, port, hostname }, (info) => {
+  console.log(`API listening on http://${info.address}:${info.port}`);
 });
